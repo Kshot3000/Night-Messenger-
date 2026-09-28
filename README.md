@@ -8,6 +8,16 @@ Repo: [github.com/Kshot3000/Night-Messenger-](https://github.com/Kshot3000/Night
 
 ![Night Messenger](apps/web/public/og.png)
 
+### Screenshots
+
+| Landing | Chat |
+| --- | --- |
+| ![Landing](docs/screenshots/landing.png) | ![Chat](docs/screenshots/app.png) |
+
+| Onboarding | Trust |
+| --- | --- |
+| ![Onboarding](docs/screenshots/onboarding.png) | ![Security](docs/screenshots/security.png) |
+
 ## Product
 
 | | |
