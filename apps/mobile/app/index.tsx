@@ -65,7 +65,7 @@ export default function ChatsScreen() {
         contentContainerStyle={filtered.length === 0 ? styles.emptyWrap : undefined}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>☾</Text>
+            <Text style={styles.emptyEmoji}>夜</Text>
             <Text style={styles.emptyTitle}>No chats yet</Text>
             <Text style={styles.emptyBody}>
               Mock conversations appear here so you can feel the product. Connect Lace when you are ready.
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   brand: { color: colors.text, fontSize: 22, fontWeight: "700", letterSpacing: -0.3 },
   sub: { color: colors.muted, fontSize: 12, marginTop: 2 },
   walletBtn: {
-    backgroundColor: "rgba(139,108,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderColor: colors.border,
     borderWidth: 1,
     paddingHorizontal: 14,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  badgeTxt: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  badgeTxt: { color: colors.onAccent, fontSize: 11, fontWeight: "700" },
   emptyWrap: { flexGrow: 1, justifyContent: "center" },
   empty: { alignItems: "center", paddingHorizontal: 32 },
   emptyEmoji: { fontSize: 36, marginBottom: 8 },

@@ -8,6 +8,7 @@ import { ConversationList } from "./ConversationList";
 import { ChatThread } from "./ChatThread";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { getDisplayName } from "@/lib/storage";
+import { SakuraPetals } from "./SakuraPetals";
 
 const api = createStubMessengerApi();
 
@@ -27,10 +28,13 @@ export function ChatShell() {
 
   return (
     <div className="nm-aurora flex h-[100dvh] flex-col">
+      <SakuraPetals count={12} />
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-nm-border bg-nm-elevated/90 px-3 backdrop-blur sm:px-4">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2" aria-label="Night Messenger home">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-nm-accent to-nm-accent-deep text-sm text-white">☾</span>
+            <span className="nm-seal flex h-8 w-8 items-center justify-center rounded-md text-sm" title="夜">
+              {PRODUCT.brandMark}
+            </span>
             <span className="hidden text-sm font-semibold sm:inline">{PRODUCT.shortName}</span>
           </Link>
           {displayName ? (

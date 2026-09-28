@@ -1,9 +1,14 @@
 import { View, Text, StyleSheet } from "react-native";
 import { colors } from "@/theme/colors";
 
+function grayFromHue(hue: number) {
+  const light = 38 + (Math.abs(Math.round(hue)) % 40);
+  return light;
+}
+
 export function Avatar({
   name,
-  hue = 265,
+  hue = 200,
   size = 48,
   online,
 }: {
@@ -13,6 +18,7 @@ export function Avatar({
   online?: boolean;
 }) {
   const initial = (name.trim()[0] ?? "?").toUpperCase();
+  const light = grayFromHue(hue ?? 200);
   return (
     <View style={{ width: size, height: size }}>
       <View
@@ -22,7 +28,7 @@ export function Avatar({
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: `hsl(${hue}, 70%, 42%)`,
+            backgroundColor: `hsl(0, 0%, ${light}%)`,
           },
         ]}
       >
@@ -45,8 +51,8 @@ export function Avatar({
 }
 
 const styles = StyleSheet.create({
-  circle: { alignItems: "center", justifyContent: "center" },
-  letter: { color: "#fff", fontWeight: "700" },
+  circle: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  letter: { color: colors.onAccent, fontWeight: "700" },
   dot: {
     position: "absolute",
     right: 0,

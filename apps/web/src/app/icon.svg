@@ -1,10 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="16" fill="#07070f"/>
-  <defs>
-    <linearGradient id="g" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#c4b5fd"/>
-      <stop offset="1" stop-color="#5b3fd4"/>
-    </linearGradient>
-  </defs>
-  <path d="M44 36c0 8.837-7.163 16-16 16S12 44.837 12 36 19.163 20 28 20c1.2 0 2.36.132 3.47.38C28.2 23.2 26 27.3 26 32c0 8.837 7.163 16 16 16 .7 0 1.39-.04 2.07-.12A15.9 15.9 0 0 1 44 36z" fill="url(#g)"/>
+  <rect width="64" height="64" rx="14" fill="#050505"/>
+  <rect x="10" y="10" width="44" height="44" rx="6" stroke="#f5f5f5" stroke-width="1.5" fill="#111"/>
+  <text x="32" y="42" text-anchor="middle" font-family="serif" font-size="28" font-weight="700" fill="#f5f5f5">夜</text>
 </svg>

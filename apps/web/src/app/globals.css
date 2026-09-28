@@ -1,22 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --nm-bg: #07070f;
-  --nm-bg-elevated: #0e0e1a;
-  --nm-bg-panel: #12121f;
-  --nm-bg-hover: #1a1a2e;
-  --nm-accent: #8b6cff;
-  --nm-accent-deep: #5b3fd4;
-  --nm-accent-soft: #c4b5fd;
-  --nm-indigo: #4338ca;
-  --nm-text: #eceaf6;
-  --nm-muted: #9b97b0;
-  --nm-border: rgba(139, 108, 255, 0.16);
-  --nm-success: #34d399;
-  --nm-danger: #f87171;
-  --nm-glass: rgba(14, 14, 26, 0.75);
-  --nm-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-  --nm-radius: 16px;
+  /* Monochrome ninja — pure / near-black, white, soft grays */
+  --nm-bg: #050505;
+  --nm-bg-elevated: #0a0a0a;
+  --nm-bg-panel: #111111;
+  --nm-bg-hover: #1a1a1a;
+  --nm-accent: #f5f5f5;
+  --nm-accent-deep: #d4d4d4;
+  --nm-accent-soft: #a3a3a3;
+  --nm-ink: #737373;
+  --nm-text: #fafafa;
+  --nm-muted: #8a8a8a;
+  --nm-border: rgba(255, 255, 255, 0.12);
+  --nm-success: #86efac;
+  --nm-danger: #fca5a5;
+  --nm-glass: rgba(10, 10, 10, 0.78);
+  --nm-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  --nm-radius: 14px;
+  --nm-on-accent: #0a0a0a;
 }
 
 @theme inline {
@@ -27,12 +29,14 @@
   --color-nm-accent: var(--nm-accent);
   --color-nm-accent-deep: var(--nm-accent-deep);
   --color-nm-accent-soft: var(--nm-accent-soft);
-  --color-nm-indigo: var(--nm-indigo);
+  --color-nm-ink: var(--nm-ink);
+  --color-nm-indigo: var(--nm-ink);
   --color-nm-text: var(--nm-text);
   --color-nm-muted: var(--nm-muted);
   --color-nm-border: var(--nm-border);
   --color-nm-success: var(--nm-success);
   --color-nm-danger: var(--nm-danger);
+  --color-nm-on-accent: var(--nm-on-accent);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -47,56 +51,78 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-::selection { background: rgba(139, 108, 255, 0.35); color: #fff; }
+::selection { background: rgba(255, 255, 255, 0.22); color: #fff; }
 
+/* Ink wash + subtle shoji / mon grid */
 .nm-aurora {
+  position: relative;
+  isolation: isolate;
   background:
-    radial-gradient(900px 500px at 12% -10%, rgba(91, 63, 212, 0.35), transparent 55%),
-    radial-gradient(700px 420px at 88% 0%, rgba(67, 56, 202, 0.28), transparent 50%),
-    radial-gradient(600px 400px at 50% 110%, rgba(139, 108, 255, 0.12), transparent 45%),
+    radial-gradient(900px 480px at 8% -8%, rgba(255, 255, 255, 0.06), transparent 55%),
+    radial-gradient(700px 400px at 92% 4%, rgba(255, 255, 255, 0.04), transparent 50%),
+    radial-gradient(520px 360px at 50% 110%, rgba(255, 255, 255, 0.03), transparent 45%),
     var(--nm-bg);
 }
+.nm-aurora::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.045;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 20%, transparent 75%);
+}
+.nm-aurora > * { position: relative; z-index: 1; }
+
 .nm-glass {
   background: var(--nm-glass);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
   border: 1px solid var(--nm-border);
   box-shadow: var(--nm-shadow);
 }
 .nm-card {
-  background: linear-gradient(180deg, rgba(26, 26, 46, 0.9), rgba(14, 14, 26, 0.95));
+  background: linear-gradient(180deg, rgba(26, 26, 26, 0.92), rgba(10, 10, 10, 0.96));
   border: 1px solid var(--nm-border);
   border-radius: var(--nm-radius);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 .nm-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
   border-radius: 999px; font-weight: 600; font-size: 0.9375rem;
-  letter-spacing: -0.01em; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  letter-spacing: -0.01em; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
   cursor: pointer; border: none; text-decoration: none;
 }
 .nm-btn:active { transform: scale(0.98); }
 .nm-btn-primary {
-  background: linear-gradient(135deg, var(--nm-accent) 0%, var(--nm-accent-deep) 100%);
-  color: #fff; box-shadow: 0 8px 28px rgba(91, 63, 212, 0.45); padding: 0.75rem 1.35rem;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 100%);
+  color: var(--nm-on-accent);
+  box-shadow: 0 8px 28px rgba(255, 255, 255, 0.12);
+  padding: 0.75rem 1.35rem;
 }
-.nm-btn-primary:hover { box-shadow: 0 12px 36px rgba(91, 63, 212, 0.55); }
+.nm-btn-primary:hover { box-shadow: 0 12px 36px rgba(255, 255, 255, 0.18); }
 .nm-btn-ghost {
-  background: rgba(139, 108, 255, 0.08); color: var(--nm-accent-soft);
-  border: 1px solid var(--nm-border); padding: 0.7rem 1.2rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nm-accent-soft);
+  border: 1px solid var(--nm-border);
+  padding: 0.7rem 1.2rem;
 }
-.nm-btn-ghost:hover { background: rgba(139, 108, 255, 0.14); }
+.nm-btn-ghost:hover { background: rgba(255, 255, 255, 0.08); color: var(--nm-text); }
 .nm-input {
-  width: 100%; background: rgba(7, 7, 15, 0.65); border: 1px solid var(--nm-border);
-  border-radius: 14px; color: var(--nm-text); padding: 0.85rem 1rem; font-size: 0.95rem;
+  width: 100%; background: rgba(5, 5, 5, 0.7); border: 1px solid var(--nm-border);
+  border-radius: 12px; color: var(--nm-text); padding: 0.85rem 1rem; font-size: 0.95rem;
   outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .nm-input:focus {
-  border-color: rgba(139, 108, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(139, 108, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 .nm-scrollbar::-webkit-scrollbar { width: 8px; }
-.nm-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 108, 255, 0.25); border-radius: 8px; }
+.nm-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 8px; }
 .nm-scrollbar::-webkit-scrollbar-track { background: transparent; }
 @keyframes nm-fade-up {
   from { opacity: 0; transform: translateY(10px); }
@@ -108,3 +134,77 @@ body {
   50% { opacity: 0.55; transform: scale(0.85); }
 }
 .nm-online-dot { animation: nm-pulse-dot 2s ease-in-out infinite; }
+
+/* Seal / brand mark */
+.nm-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--nm-on-accent);
+  background: linear-gradient(145deg, #ffffff, #d0d0d0);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Falling cherry blossom petals — subtle, monochrome */
+.nm-sakura {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.nm-sakura__petal {
+  position: absolute;
+  top: -12%;
+  width: 10px;
+  height: 10px;
+  opacity: 0.38;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 40%, #fff 0%, #fff 42%, transparent 70%),
+    radial-gradient(ellipse 55% 70% at 30% 55%, rgba(255,255,255,0.9) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 70% at 70% 55%, rgba(255,255,255,0.85) 0%, transparent 65%);
+  border-radius: 60% 40% 60% 40%;
+  filter: blur(0.2px);
+  animation-name: nm-sakura-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+.nm-sakura__petal::after {
+  content: "";
+  position: absolute;
+  inset: 15% 35%;
+  background: rgba(255,255,255,0.55);
+  border-radius: 40%;
+  transform: rotate(25deg);
+}
+.nm-sakura__petal:nth-child(odd) {
+  border-radius: 50% 50% 50% 0;
+  width: 8px;
+  height: 12px;
+  opacity: 0.32;
+}
+.nm-sakura__petal:nth-child(3n) {
+  width: 12px;
+  height: 8px;
+  opacity: 0.26;
+  filter: blur(0.4px);
+}
+@keyframes nm-sakura-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% { opacity: 0.42; }
+  90% { opacity: 0.26; }
+  100% {
+    transform: translate3d(var(--drift, 40px), 110vh, 0) rotate(720deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nm-sakura__petal { animation: none !important; opacity: 0.12; top: 20%; }
+}

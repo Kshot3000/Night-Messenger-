@@ -7,21 +7,23 @@ import {
   ROADMAP,
 } from "@midnight-messenger/shared";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SakuraPetals } from "@/components/SakuraPetals";
 
 export default function LandingPage() {
   return (
     <div className="nm-aurora min-h-screen">
+      <SakuraPetals count={20} />
       <SiteHeader />
       <main>
         <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
           <div className="nm-fade-up mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-nm-border bg-nm-accent/10 px-3 py-1 text-xs font-medium text-nm-accent-soft">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-nm-border bg-white/5 px-3 py-1 text-xs font-medium text-nm-accent-soft">
               <span className="h-1.5 w-1.5 rounded-full bg-nm-success" />
               Free &amp; open source · Built for Midnight
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-nm-text sm:text-5xl sm:leading-[1.08]">
               Private messages.
-              <span className="block bg-gradient-to-r from-nm-accent-soft via-nm-accent to-nm-indigo bg-clip-text text-transparent">
+              <span className="mt-1 block bg-gradient-to-r from-white via-nm-accent-soft to-nm-ink bg-clip-text text-transparent">
                 Selective proofs.
               </span>
             </h1>
@@ -45,20 +47,25 @@ export default function LandingPage() {
             <div className="nm-glass overflow-hidden rounded-2xl">
               <div className="flex items-center gap-2 border-b border-nm-border px-4 py-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-nm-danger/80" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                <span className="h-2.5 w-2.5 rounded-full bg-nm-accent-soft/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-nm-success" />
                 <span className="ml-3 text-xs text-nm-muted">Night Messenger · 1:1</span>
+                <span className="ml-auto font-serif text-sm text-nm-accent-soft/80" title="夜">
+                  {PRODUCT.brandMark}
+                </span>
               </div>
               <div className="grid md:grid-cols-[280px_1fr]">
                 <div className="border-b border-nm-border p-4 md:border-b-0 md:border-r">
                   {["Ada", "Orion", "Nyx"].map((n, i) => (
                     <div
                       key={n}
-                      className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 ${i === 0 ? "bg-nm-accent/15" : ""}`}
+                      className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 ${i === 0 ? "bg-white/10" : ""}`}
                     >
                       <div
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
-                        style={{ background: `hsl(${265 + i * 40} 65% 42%)` }}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-nm-on-accent"
+                        style={{
+                          background: `linear-gradient(145deg, hsl(0 0% ${72 - i * 12}%), hsl(0 0% ${42 - i * 8}%))`,
+                        }}
                       >
                         {n[0]}
                       </div>
@@ -75,7 +82,7 @@ export default function LandingPage() {
                   <div className="max-w-[80%] rounded-2xl rounded-bl-md border border-nm-border bg-nm-panel px-3.5 py-2.5 text-sm">
                     Committed existence on-chain; body stays E2EE.
                   </div>
-                  <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-gradient-to-br from-nm-accent to-nm-accent-deep px-3.5 py-2.5 text-sm text-white">
+                  <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-gradient-to-br from-nm-accent to-nm-accent-deep px-3.5 py-2.5 text-sm text-nm-on-accent">
                     Prove delivery when you need it — not the message.
                   </div>
                   <div className="mt-2 flex gap-2">
@@ -163,7 +170,7 @@ export default function LandingPage() {
               <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                 {ROADMAP.map((r) => (
                   <li key={r} className="flex gap-2 text-sm text-nm-text">
-                    <span className="text-nm-accent">→</span> {r}
+                    <span className="text-nm-accent-soft">→</span> {r}
                   </li>
                 ))}
               </ul>
@@ -174,6 +181,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-nm-border py-8 text-center text-xs text-nm-muted">
         <p>
+          <span className="mr-1.5 font-serif text-nm-accent-soft">{PRODUCT.brandMark}</span>
           {PRODUCT.name} · Free forever ·{" "}
           <a className="text-nm-accent-soft hover:underline" href={PRODUCT.repoUrl}>
             Kshot3000/Night-Messenger-

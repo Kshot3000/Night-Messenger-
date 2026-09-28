@@ -75,7 +75,7 @@ export function ConversationList({
                     </div>
                   </div>
                   {c.unreadCount > 0 ? (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-nm-accent px-1.5 text-[11px] font-bold text-white">
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-nm-accent px-1.5 text-[11px] font-bold text-nm-on-accent">
                       {c.unreadCount}
                     </span>
                   ) : null}

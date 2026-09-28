@@ -10,19 +10,20 @@ export const PRODUCT = {
   repoUrl: 'https://github.com/Kshot3000/Night-Messenger-',
   twitter: '@kshot9000',
   freeAndOpen: true as const,
+  brandMark: '夜',
   theme: {
-    bg: '#07070f',
-    bgElevated: '#0e0e1a',
-    bgGlass: 'rgba(14, 14, 26, 0.72)',
-    accent: '#8b6cff',
-    accentDeep: '#5b3fd4',
-    accentSoft: '#c4b5fd',
-    indigo: '#4338ca',
-    violet: '#7c3aed',
-    text: '#eceaf6',
-    muted: '#9b97b0',
-    border: 'rgba(139, 108, 255, 0.18)',
-    success: '#34d399',
+    bg: '#050505',
+    bgElevated: '#0a0a0a',
+    bgGlass: 'rgba(10, 10, 10, 0.78)',
+    accent: '#f5f5f5',
+    accentDeep: '#d4d4d4',
+    accentSoft: '#a3a3a3',
+    ink: '#737373',
+    text: '#fafafa',
+    muted: '#8a8a8a',
+    border: 'rgba(255, 255, 255, 0.12)',
+    onAccent: '#0a0a0a',
+    success: '#86efac',
     warning: '#fbbf24',
   },
 } as const;
@@ -55,7 +56,7 @@ export const WHY_NOT_SIGNAL = [
     title: 'Free, open source & wallet-native',
     body: 'Connect Lace. No phone number required for the MVP path. Inspect the repo; no dark patterns, no paywalls.',
   },
-];
+] as const;
 
 export const ONBOARDING_STEPS = [
   {

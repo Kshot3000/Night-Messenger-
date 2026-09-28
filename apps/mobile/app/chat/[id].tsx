@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 6,
   },
   body: { color: colors.text, fontSize: 15, lineHeight: 21 },
-  bodyMine: { color: "#fff" },
+  bodyMine: { color: colors.onAccent },
   meta: { color: colors.muted, fontSize: 10, marginTop: 4 },
   compose: {
     flexDirection: "row",
@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   sendDisabled: { opacity: 0.4 },
-  sendTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  sendTxt: { color: colors.onAccent, fontWeight: "700", fontSize: 14 },
 });

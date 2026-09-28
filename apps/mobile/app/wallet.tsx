@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  btnTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  btnTxt: { color: colors.onAccent, fontWeight: "700", fontSize: 15 },
   hint: { textAlign: "center", color: colors.muted, marginTop: 16, fontSize: 12 },
 });

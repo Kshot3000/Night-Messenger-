@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ONBOARDING_STEPS, PRIVACY_LEGEND, PRODUCT } from "@midnight-messenger/shared";
 import { ConnectWalletButton } from "@/components/ConnectWalletButton";
 import { getDisplayName, setDisplayName, setOnboarded, isOnboarded } from "@/lib/storage";
+import { SakuraPetals } from "@/components/SakuraPetals";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="nm-aurora flex min-h-screen flex-col">
+      <SakuraPetals count={14} />
       <header className="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-5">
         <Link href="/" className="text-sm font-semibold text-nm-text">
           ← {PRODUCT.name}

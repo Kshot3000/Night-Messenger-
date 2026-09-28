@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PRODUCT, PRIVACY_LEGEND } from "@midnight-messenger/shared";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SakuraPetals } from "@/components/SakuraPetals";
 
 export const metadata: Metadata = {
   title: "Trust & security",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function SecurityPage() {
   return (
     <div className="nm-aurora min-h-screen">
+      <SakuraPetals count={14} />
       <SiteHeader solid />
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-nm-accent-soft">Trust</p>

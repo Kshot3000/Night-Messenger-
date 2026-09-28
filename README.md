@@ -2,6 +2,8 @@
 
 **Private messaging on Midnight — with selective disclosure.**
 
+Monochrome ninja UI (black / white / soft gray) with 夜 seal mark and subtle sakura petals — no Midnight purple.
+
 Free & open source. 1:1 DMs where plaintext stays encrypted, existence can be proven on-chain, and you choose what to disclose.
 
 Repo: [github.com/Kshot3000/Night-Messenger-](https://github.com/Kshot3000/Night-Messenger-)
