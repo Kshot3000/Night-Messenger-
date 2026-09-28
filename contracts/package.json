@@ -1,0 +1,9 @@
+{
+  "name": "@midnight-messenger/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compact / Midnight contract stubs for Night Messenger selective DMs",
+  "type": "module",
+  "main": "./src/selective-dm.ts",
+  "types": "./src/selective-dm.ts"
+}
