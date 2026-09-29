@@ -1,0 +1,33 @@
+Hey Midnight team —
+
+Sharing my Midnight work so you can use it, fork it, and build on it.
+
+Products & sites
+- Night Messenger (free private DMs, web + Android): https://kshot3000.github.io/Night-Messenger-/ · https://github.com/Kshot3000/Night-Messenger-
+- nightstream.xyz: https://nightstream.xyz
+- Nocturne (private message/email): https://github.com/Kshot3000/nocturne
+- Cardano + Midnight Qwen Builder: https://github.com/Kshot3000/Cardano-Midnight-Qwen-Builder
+- Midnight GrokBot Agent: https://github.com/Kshot3000/Midnight-GrokBot-Agent
+- NightDream: https://github.com/Kshot3000/nightdream.xyz · http://nightdream.xyz/
+
+Open PRs (wallet discovery / docs / tools)
+- https://github.com/midnightntwrk/midnight-docs/pull/1406
+- https://github.com/midnightntwrk/midnight-docs/pull/1407
+- https://github.com/midnightntwrk/midnight-docs/pull/1408
+- https://github.com/midnightntwrk/example-zkloan/pull/60
+- https://github.com/midnightntwrk/midnight-awesome-dapps/pull/189
+- https://github.com/midnightntwrk/midnight-awesome-dapps/pull/194
+- https://github.com/OpenZeppelin/midnight-apps/pull/323
+- https://github.com/nel349/midnight-bank/pull/6
+- https://github.com/bricktowers/midnight-seabattle/pull/11
+- https://github.com/bricktowers/midnight-rwa/pull/1
+
+Service desk thread: https://github.com/midnightntwrk/servicedesk/issues/214
+
+Cardano donations:
+addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v
+
+X: @kshot9000
+
+Thanks —
+Kshot
