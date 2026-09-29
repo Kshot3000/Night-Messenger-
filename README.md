@@ -8,6 +8,8 @@ Free & open source. 1:1 DMs where plaintext stays encrypted, existence can be pr
 
 Repo: [github.com/Kshot3000/Night-Messenger-](https://github.com/Kshot3000/Night-Messenger-)
 
+**Live demo:** [kshot3000.github.io/Night-Messenger-](https://kshot3000.github.io/Night-Messenger-/)
+
 ![Night Messenger](apps/web/public/og.png)
 
 ### Screenshots

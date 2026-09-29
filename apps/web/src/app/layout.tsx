@@ -5,10 +5,17 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://night-messenger.app";
+/** Live GitHub Pages URL (repo name includes trailing hyphen). */
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://kshot3000.github.io/Night-Messenger-").replace(
+  /\/$/,
+  "",
+);
+const siteUrlSlash = `${siteUrl}/`;
+const ogImage = `${siteUrl}/og.png`;
+const icon = (path: string) => `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(siteUrlSlash),
   title: {
     default: "Night Messenger — Private DMs on Midnight",
     template: "%s · Night Messenger",
@@ -21,22 +28,32 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: siteUrl,
+    url: siteUrlSlash,
     siteName: "Night Messenger",
     title: "Night Messenger — Private DMs on Midnight",
     description:
       "1:1 DMs where plaintext stays encrypted, existence can be proven on-chain, and you choose what to disclose. Free & open source.",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Night Messenger" }],
+    images: [
+      {
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: "Night Messenger — black & white ninja + sakura",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Night Messenger",
     description: "Private messaging on Midnight with selective disclosure. Free & open source.",
-    images: ["/og.png"],
+    images: [ogImage],
   },
   icons: {
-    icon: [{ url: "/favicon.ico" }, { url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/apple-touch-icon.png" }],
+    icon: [
+      { url: icon("/favicon.ico") },
+      { url: icon("/icon.svg"), type: "image/svg+xml" },
+    ],
+    apple: [{ url: icon("/apple-touch-icon.png") }],
   },
 };
 

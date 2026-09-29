@@ -1,11 +1,20 @@
 import type { NextConfig } from "next";
-import path from "path";
+
+const repoBase = "/Night-Messenger-";
+const isPages = process.env.GITHUB_PAGES === "true";
 
 const nextConfig: NextConfig = {
+  output: "export",
+  // Trailing slash helps GitHub Pages serve nested routes as .../index.html
+  trailingSlash: true,
+  images: { unoptimized: true },
   transpilePackages: ["@midnight-messenger/shared"],
-  experimental: {
-    // allow importing TS from workspace package
-  },
+  ...(isPages
+    ? {
+        basePath: repoBase,
+        assetPrefix: repoBase,
+      }
+    : {}),
 };
 
 export default nextConfig;
