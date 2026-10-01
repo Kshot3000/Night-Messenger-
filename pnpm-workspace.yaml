@@ -2,6 +2,28 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'contracts'
+overrides:
+  regenerate-unicode-properties: 10.2.2
 allowBuilds:
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
+  sharp: true
+  unrs-resolver: true
+  '@tailwindcss/oxide': true
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@next/env@15.5.27'
+  - '@next/eslint-plugin-next@15.5.27'
+  - '@next/swc-darwin-arm64@15.5.27'
+  - '@next/swc-darwin-x64@15.5.27'
+  - '@next/swc-linux-arm64-gnu@15.5.27'
+  - '@next/swc-linux-arm64-musl@15.5.27'
+  - '@next/swc-linux-x64-gnu@15.5.27'
+  - '@next/swc-linux-x64-musl@15.5.27'
+  - '@next/swc-win32-arm64-msvc@15.5.27'
+  - '@next/swc-win32-x64-msvc@15.5.27'
+  - eslint-config-next@15.5.27
+  - next@15.5.27
+# Keep the web framework's React 19 types isolated from the Expo React 18 starter.
+packageExtensions:
+  next@15.5.27:
+    dependencies:
+      '@types/react': 19.3.0

@@ -1,132 +1,95 @@
 # Night Messenger
 
-**Private messaging on Midnight — with selective disclosure.**
+**Your words. Not the world’s.** A calm, open-source messaging preview for the Midnight ecosystem.
 
-Monochrome ninja UI (black / white / soft gray) with 夜 seal mark and subtle sakura petals — no Midnight purple.
+Monochrome ninja UI (black / white / soft gray) with 夜 seal mark and subtle white sakura petals — free forever.
 
-Free & open source. 1:1 DMs where plaintext stays encrypted, existence can be proven on-chain, and you choose what to disclose.
+[Open the website](https://kshot3000.github.io/Night-Messenger-/) · [Privacy model](packages/shared/PRIVACY.md)
 
-Repo: [github.com/Kshot3000/Night-Messenger-](https://github.com/Kshot3000/Night-Messenger-)
+![Night Messenger landing page](docs/screenshots/landing.png)
 
-**Live demo:** [kshot3000.github.io/Night-Messenger-](https://kshot3000.github.io/Night-Messenger-/)
+## What works
 
-![Night Messenger](apps/web/public/og.png)
+- Responsive landing page with an interactive messenger preview, product tour, and FAQ.
+- Full desktop messenger and mobile inbox-to-conversation navigation.
+- Local conversations and message history, per-chat drafts, emoji, and reactions.
+- Search across conversations or within a thread; unread filtering, pinning, and archiving.
+- Edit/delete your own messages, delete a conversation with confirmation, or export it to JSON.
+- Full workspace backup/restore with file validation and replacement confirmation.
+- Profile onboarding, optional wallet selection, compact view, and sample-data reset.
+- Accessible dialogs, visible keyboard focus, reduced motion, and Ctrl/Cmd+K search.
+- Midnight DApp Connector v4 discovery and optional preprod connection, with rejection/timeout handling.
 
-### Screenshots
+**This is a local product preview.** Messages are readable browser data, not encrypted or delivered to anyone. A connected wallet does not enable live chat. End-to-end encryption, a relay, device synchronization, and Midnight proofs are future work. Please use sample content only. There are no fake delivery receipts or generated replies.
 
-| Landing | Chat |
-| --- | --- |
-| ![Landing](docs/screenshots/landing.png) | ![Chat](docs/screenshots/app.png) |
+## Run the website
 
-| Onboarding | Trust |
-| --- | --- |
-| ![Onboarding](docs/screenshots/onboarding.png) | ![Security](docs/screenshots/security.png) |
-
-## Product
-
-| | |
-| --- | --- |
-| **Web** | Next.js App Router · Messenger-like chat shell · landing, onboarding, trust page |
-| **Android** | Expo (React Native) · same visual language · Android-first `app.json` |
-| **Privacy** | Documented in [`packages/shared/PRIVACY.md`](packages/shared/PRIVACY.md) |
-| **Contracts** | Compact stubs in [`contracts/`](contracts/) — explicitly unimplemented |
-| **Price** | Free forever · no paywalls |
-
-### Selective privacy (summary)
-
-```mermaid
-flowchart LR
-  A[Compose message] --> B[E2EE encrypt off-chain]
-  B --> C[Optional existence commitment on Midnight]
-  C --> D[Selective disclosure proofs]
-  D --> E[Delivery / membership / attributes]
-  B -.-> F[Plaintext never on-chain]
-```
-
-| Layer | What | Who sees it |
-| --- | --- | --- |
-| On-chain / proven | Commitments, optional membership proofs, opted-in metadata | Verifiers with the proof |
-| Off-chain / encrypted | Message plaintext | Recipients only |
-| Selective | Delivery / membership / attribute proofs without content | Parties you choose |
-
-## Monorepo layout
-
-```
-/apps/web          — Next.js + Tailwind (priority)
-/apps/mobile       — Expo React Native (Android-first)
-/packages/shared   — types, privacy docs, wallet helper, API stubs
-/contracts         — selective DM Compact/TS stubs + README
-```
-
-## Prerequisites
-
-- Node.js ≥ 20
-- pnpm 9.x (`corepack enable` or `npm i -g pnpm@9`)
-- For Android: Expo Go or Android Studio emulator
-
-## Install
+Use **Node.js 24 LTS** (minimum 22.18) and **pnpm 11.25.0**.
 
 ```bash
-cd Night-Messenger-   # or midnight-messenger locally
-pnpm install
+npm install -g pnpm@11.25.0
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-## Run web
+Open `http://localhost:3000`. Fonts are bundled locally; builds do not fetch Google Fonts.
 
-```bash
-pnpm --filter @midnight-messenger/web dev
-# → http://localhost:3000
-```
-
-- `/` — landing (sells selective privacy)
-- `/onboarding` — wallet → display name → privacy lesson
-- `/app` — chat shell (mock conversations if wallet not connected)
-- `/security` — trust & security
-
-**Wallet:** Connect enumerates `Object.values(window.midnight)` / `Object.keys` — never hardcodes `mnLace`.
-
-## Run Android
-
-```bash
-pnpm --filter @midnight-messenger/mobile start
-# then press `a` for Android, or scan QR with Expo Go
-```
-
-## Architecture
-
-```mermaid
-flowchart TB
-  subgraph clients [Clients]
-    Web[apps/web]
-    Mobile[apps/mobile]
-  end
-  Shared[packages/shared]
-  Contracts[contracts stubs]
-  Web --> Shared
-  Mobile --> Shared
-  Shared -.->|TODO| Contracts
-  Shared --> Lace[Lace / window.midnight]
-```
-
-## Stubbed vs real
-
-| Piece | Status |
+| Route | Experience |
 | --- | --- |
-| Chat UI (web + Android) | **Real** mock UX |
-| Landing / onboarding / trust | **Real** product pages |
-| Wallet discovery helper | **Real** enumeration pattern; connect needs Lace installed |
-| Message transport / E2EE | **Stub** — local mock API |
-| Compact circuits / proofs | **Stub** — TODO interfaces only |
-| Groups / reactions / media | **Not in MVP** (media button stubbed) |
+| `/` | Landing page and interactive preview |
+| `/onboarding/` | Display name, optional wallet, preview explanation |
+| `/app/` | Working local messenger |
+| `/security/` | Current capabilities, data handling, and privacy roadmap |
 
-## Suggested next steps
+```bash
+pnpm test           # State, backup validation, and wallet regression tests
+pnpm typecheck      # Web and shared packages
+pnpm lint           # Web source
+pnpm build:web      # Static export for a root-domain host
+pnpm build:pages    # Static export with /Night-Messenger- base path
+```
 
-1. Wire `@midnight-ntwrk/dapp-connector-api` and live Lace connect on preprod
-2. Implement Compact `commitMessage` / `proveDelivery` from `contracts/`
-3. E2EE key agreement + encrypted relay
-4. Android Lace deep-link when platform support is ready
-5. Groups & media after 1:1 is solid
+The export is written to `apps/web/out/`. Serve it over HTTP, not by opening HTML files directly. To preview a root-domain build: `python -m http.server 3000 --directory apps/web/out`.
 
-## License
+## GitHub Pages
 
-MIT (or as declared when published). Built for the Midnight ecosystem by Kshot ([@kshot9000](https://x.com/kshot9000) / [Kshot3000](https://github.com/Kshot3000)).
+The current website publishes from the **gh-pages branch, root folder**. The `Web checks` GitHub Actions workflow validates every main-branch push and pull request. To publish after the checks pass:
+
+```bash
+bash scripts/deploy-gh-pages.sh
+```
+
+This builds the Pages export and adds a normal commit to `gh-pages`; it does not force-push or replace branch history. Git write access is required. `NEXT_PUBLIC_SITE_URL` can override the canonical URL; change `repoBase` in `apps/web/next.config.ts` if moving to a differently named repository.
+
+## Local data and backups
+
+The web app stores its workspace under `night_messenger_workspace_v1`, plus display-name and compact-view preferences. Data stays in the current browser profile and origin. Storage failures are shown in the UI; unreadable saved data is preserved until you explicitly restore a backup or reset the demo. Backups and single-conversation exports contain readable content.
+
+- **Settings → Back up chats:** export all conversations, drafts, reactions, and archive/pin state.
+- **Settings → Restore backup:** validate a workspace backup, then confirm replacement.
+- **Conversation details → Export:** export one conversation; this is not a workspace restore file.
+- **Settings → Reset demo:** replace conversations with the samples. Profile/preferences remain.
+- Clear the site's browser data to remove everything. Delete downloaded backups separately.
+
+Multiple open tabs do not synchronize edits; use one tab per browser profile to avoid overwriting another tab's changes. A refresh opens the first pinned/recent conversation. A wallet session is in memory and is not persisted.
+
+## Repository layout
+
+| Folder | Purpose |
+| --- | --- |
+| `apps/web` | Next.js 15 / React 19 website and local messenger |
+| `apps/mobile` | Original Expo / React Native Android starter (separate, not redesigned here) |
+| `packages/shared` | Domain types, wallet helper, API stubs, privacy documentation |
+| `contracts` | Unimplemented Compact interfaces; no deployed contracts |
+| `scripts` | Portable Pages build and history-preserving deployment |
+
+The mobile starter keeps React 18. A pnpm package extension isolates Next.js's React 19 types to avoid monorepo type conflicts. Run the Android starter with `pnpm dev:mobile`; mobile native builds are outside this web release's verification.
+
+## Next milestones
+
+1. Authenticated identity and device/session key management.
+2. Reviewed end-to-end encryption and encrypted message transport.
+3. Reliable delivery, multi-device sync, abuse prevention, and recovery.
+4. Implemented/audited Midnight contracts and selective-disclosure proofs.
+
+Built by [Kshot3000](https://github.com/Kshot3000) for the Midnight ecosystem. MIT license.

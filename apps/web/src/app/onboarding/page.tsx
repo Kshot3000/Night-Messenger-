@@ -1,135 +1,218 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ONBOARDING_STEPS, PRIVACY_LEGEND, PRODUCT } from "@midnight-messenger/shared";
+import { Brand } from "@/components/Brand";
+import { Icon } from "@/components/Icon";
 import { ConnectWalletButton } from "@/components/ConnectWalletButton";
-import { getDisplayName, setDisplayName, setOnboarded, isOnboarded } from "@/lib/storage";
+import { getDisplayName, setDisplayName, setOnboarded } from "@/lib/storage";
 import { SakuraPetals } from "@/components/SakuraPetals";
-
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
-  const [walletOk, setWalletOk] = useState(false);
-
-  useEffect(() => {
-    const existing = getDisplayName();
-    if (existing) setName(existing);
-    if (isOnboarded()) {
-      // allow re-running onboarding
+  const [error, setError] = useState("");
+  useEffect(() => setName(getDisplayName() || ""), []);
+  function next() {
+    if (step === 0) {
+      if (!name.trim()) {
+        setError("A display name helps make this space yours.");
+        return;
+      }
+      if (!setDisplayName(name))
+        setError(
+          "Your browser cannot save this name. You can still explore this session.",
+        );
+      else setError("");
     }
-  }, []);
-
-  const steps = ONBOARDING_STEPS;
-
+    setStep((s) => s + 1);
+  }
   return (
-    <div className="nm-aurora flex min-h-screen flex-col">
+    <div className="onboarding-page nm-aurora">
       <SakuraPetals count={14} />
-      <header className="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-5">
-        <Link href="/" className="text-sm font-semibold text-nm-text">
-          ← {PRODUCT.name}
+      <header className="onboarding-header container">
+        <Brand />
+        <Link className="text-link" href="/app">
+          Skip to the preview <Icon name="arrowUp" size={15} />
         </Link>
-        <span className="text-xs text-nm-muted">
-          Step {step + 1} of {steps.length}
-        </span>
       </header>
-
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-10">
-        <div className="mb-6 flex gap-2">
-          {steps.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 rounded-full ${i <= step ? "bg-nm-accent" : "bg-nm-border"}`}
-            />
-          ))}
-        </div>
-
-        <div className="nm-card flex flex-1 flex-col p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-wider text-nm-accent-soft">
-            {steps[step].id}
+      <main id="main-content" className="onboarding-main container">
+        <aside className="onboarding-story">
+          <p className="eyebrow">
+            <span className="status-dot" /> COME AS YOU ARE
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">{steps[step].title}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-nm-muted">{steps[step].body}</p>
-
-          <div className="mt-8 flex-1">
-            {step === 0 && (
-              <div className="space-y-4">
-                <ConnectWalletButton
-                  onConnected={() => setWalletOk(true)}
-                />
-                <button
-                  type="button"
-                  className="text-sm text-nm-muted underline-offset-2 hover:text-nm-accent-soft hover:underline"
-                  onClick={() => setWalletOk(true)}
-                >
-                  Skip for now — explore with mock chats
-                </button>
-                {walletOk ? (
-                  <p className="text-sm text-nm-success">Ready — continue when you like.</p>
-                ) : null}
+          <h1>
+            A little space.
+            <br />
+            <span>All your own.</span>
+          </h1>
+          <p>
+            Good conversations start with feeling at home.
+            <br />
+            Let’s make this corner yours.
+          </p>
+          <div className="onboarding-moon" aria-hidden="true">
+            <span>
+              <Icon name="moon" size={60} />
+            </span>
+            <i />
+          </div>
+          <div className="onboarding-note">
+            <Icon name="moon" size={20} />
+            <span>
+              No phone number. No inbox to verify.
+              <br />
+              <strong>Just a name, and you’re here.</strong>
+            </span>
+          </div>
+        </aside>
+        <div className="onboarding-card">
+          <div
+            className="onboarding-progress"
+            aria-label={`Step ${step + 1} of 3`}
+          >
+            {["Your space", "Your wallet", "You’re home"].map((label, i) => (
+              <div key={label} className={i <= step ? "current" : ""}>
+                <span>
+                  {i < step ? <Icon name="check" size={11} /> : `0${i + 1}`}
+                </span>
+                {label}
               </div>
-            )}
-
-            {step === 1 && (
-              <div className="space-y-3">
-                <label htmlFor="display-name" className="text-sm font-medium">
+            ))}
+          </div>
+          <div className="onboarding-content" key={step}>
+            <span className="step-icon">
+              <Icon
+                name={step === 0 ? "chat" : step === 1 ? "wallet" : "moon"}
+                size={26}
+              />
+            </span>
+            <p className="eyebrow">STEP 0{step + 1}</p>
+            <h2>
+              {step === 0
+                ? "What should we call you?"
+                : step === 1
+                  ? "A wallet, if you want."
+                  : "Make yourself at home."}
+            </h2>
+            <p>
+              {step === 0
+                ? "A name for this little corner. Keep it simple. Keep it you."
+                : step === 1
+                  ? "Explore a Midnight wallet connection, or jump straight into the conversation."
+                  : "One thing to know before you step inside: this is a local product preview."}
+            </p>
+            {step === 0 && (
+              <form
+                id="onboarding-name-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  next();
+                }}
+              >
+                <label className="field-label" htmlFor="display-name">
                   Display name
                 </label>
                 <input
+                  className="text-input"
                   id="display-name"
-                  className="nm-input"
-                  placeholder="e.g. Kshot"
-                  maxLength={32}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setError("");
+                  }}
+                  maxLength={32}
                   autoFocus
+                  autoComplete="nickname"
+                  placeholder="Your name or a good alias"
+                  required
                 />
-                <p className="text-xs text-nm-muted">
-                  Stored locally on this device. Not published on-chain by default.
+                <p className="field-help">
+                  Saved only in this browser. Change it anytime.
                 </p>
+              </form>
+            )}
+            {step === 1 && (
+              <div className="onboarding-wallet">
+                <ConnectWalletButton />
+                <span>No wallet? You’re already welcome here.</span>
               </div>
             )}
-
             {step === 2 && (
-              <ul className="space-y-3">
-                {PRIVACY_LEGEND.map((item) => (
-                  <li key={item.layer} className="rounded-xl border border-nm-border bg-black/25 p-4">
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-nm-muted">{item.summary}</p>
-                  </li>
-                ))}
-              </ul>
+              <div className="onboarding-explainer">
+                <div>
+                  <Icon name="chat" size={18} />
+                  <span>
+                    <strong>A working space to explore</strong>
+                    <small>Write, react, search, and create local chats.</small>
+                  </span>
+                </div>
+                <div>
+                  <Icon name="eye" size={18} />
+                  <span>
+                    <strong>Sample content, please</strong>
+                    <small>
+                      Demo messages are saved as readable data on this device.
+                    </small>
+                  </span>
+                </div>
+                <div>
+                  <Icon name="moon" size={18} />
+                  <span>
+                    <strong>More on the horizon</strong>
+                    <small>
+                      Encryption, delivery, and Midnight proofs are planned.
+                    </small>
+                  </span>
+                </div>
+              </div>
             )}
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="onboarding-buttons">
+              {step > 0 && (
+                <button
+                  className="icon-button"
+                  aria-label="Previous step"
+                  onClick={() => setStep((s) => s - 1)}
+                >
+                  <Icon name="back" />
+                </button>
+              )}
+              {step === 0 ? (
+                <button
+                  className="button button-accent"
+                  type="submit"
+                  form="onboarding-name-form"
+                  disabled={!name.trim()}
+                >
+                  Continue <Icon name="arrow" size={18} />
+                </button>
+              ) : (
+                <button
+                  className="button button-accent"
+                  onClick={() => {
+                    if (step === 2) {
+                      setOnboarded();
+                      router.push("/app");
+                    } else next();
+                  }}
+                >
+                  {step === 2 ? "Step inside" : "Continue to preview"}{" "}
+                  <Icon name="arrow" size={18} />
+                </button>
+              )}
+            </div>
           </div>
-
-          <div className="mt-8 flex gap-3">
-            {step > 0 ? (
-              <button type="button" className="nm-btn nm-btn-ghost flex-1" onClick={() => setStep((s) => s - 1)}>
-                Back
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="nm-btn nm-btn-primary flex-1"
-              disabled={step === 0 && !walletOk}
-              onClick={() => {
-                if (step === 1) {
-                  if (!name.trim()) return;
-                  setDisplayName(name);
-                }
-                if (step >= steps.length - 1) {
-                  setOnboarded();
-                  router.push("/app");
-                  return;
-                }
-                setStep((s) => s + 1);
-              }}
-            >
-              {step >= steps.length - 1 ? "Open Night Messenger" : "Continue"}
-            </button>
-          </div>
+          <p className="onboarding-bottom">
+            Free & open source <span>·</span>{" "}
+            <Link href="/security">
+              Built on transparency <Icon name="arrowUp" size={12} />
+            </Link>
+          </p>
         </div>
       </main>
     </div>

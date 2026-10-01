@@ -1,86 +1,141 @@
 "use client";
-
-import { useRef, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import { Icon } from "./Icon";
+import { MAX_BODY_LENGTH } from "@/lib/messenger-store";
 export function ComposeBox({
+  value,
+  onChange,
   onSend,
-  disabled,
-  placeholder = "Message…",
+  name,
 }: {
+  value: string;
+  onChange: (value: string) => void;
   onSend: (body: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
+  name: string;
 }) {
-  const [value, setValue] = useState("");
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  function submit() {
-    const body = value.trim();
-    if (!body || disabled) return;
-    onSend(body);
-    setValue("");
-    ref.current?.focus();
+  const input = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLDivElement>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  useEffect(() => {
+    if (input.current) {
+      input.current.style.height = "auto";
+      input.current.style.height =
+        Math.min(input.current.scrollHeight, 140) + "px";
+    }
+  }, [value]);
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function close(e: PointerEvent) {
+      if (!picker.current?.contains(e.target as Node)) setEmojiOpen(false);
+    }
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [emojiOpen]);
+  function send() {
+    if (!value.trim()) return;
+    onSend(value);
+    setEmojiOpen(false);
+    input.current?.focus();
   }
-
   return (
-    <div className="border-t border-nm-border bg-nm-elevated/80 px-3 py-3 sm:px-4">
-      <div className="flex items-end gap-2 rounded-2xl border border-nm-border bg-black/30 px-3 py-2 shadow-inner focus-within:border-nm-accent/50">
-        <button
-          type="button"
-          className="mb-1 rounded-full p-2 text-nm-muted hover:bg-nm-hover hover:text-nm-accent-soft"
-          aria-label="Attach media (coming soon)"
-          title="Media upload — stub for later"
-          disabled
-        >
-          <PlusIcon />
-        </button>
-        <label className="sr-only" htmlFor="nm-compose">
-          Message
-        </label>
+    <div className="compose-area">
+      <div className="compose-box">
         <textarea
-          id="nm-compose"
-          ref={ref}
+          id="message-composer"
+          aria-label={`Message ${name}`}
+          ref={input}
           rows={1}
-          className="max-h-32 min-h-[40px] flex-1 resize-none bg-transparent py-2 text-[15px] text-nm-text outline-none placeholder:text-nm-muted"
-          placeholder={placeholder}
+          maxLength={MAX_BODY_LENGTH}
+          placeholder={`Message ${name}…`}
           value={value}
-          disabled={disabled}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
               e.preventDefault();
-              submit();
+              send();
             }
           }}
         />
-        <button
-          type="button"
-          className="nm-btn nm-btn-primary mb-0.5 h-10 w-10 shrink-0 !rounded-full !p-0 disabled:opacity-40"
-          aria-label="Send message"
-          disabled={disabled || !value.trim()}
-          onClick={submit}
-        >
-          <SendIcon />
-        </button>
+        <div className="composer-tools">
+          <div className="emoji-wrap" ref={picker}>
+            <button
+              className="icon-button"
+              aria-label="Add emoji"
+              aria-expanded={emojiOpen}
+              onClick={() => setEmojiOpen(!emojiOpen)}
+            >
+              <Icon name="smile" />
+            </button>
+            {emojiOpen && (
+              <div
+                className="emoji-picker"
+                role="group"
+                aria-label="Choose an emoji"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setEmojiOpen(false);
+                    input.current?.focus();
+                  }
+                }}
+              >
+                {["✨", "☾", "❤️", "👍", "🌱", "🎉", "😊", "🔥"].map(
+                  (emoji) => (
+                    <button
+                      key={emoji}
+                      aria-label={`Insert ${emoji}`}
+                      onClick={() => {
+                        const el = input.current;
+                        const start = el?.selectionStart ?? value.length;
+                        const end = el?.selectionEnd ?? value.length;
+                        onChange(
+                          (
+                            value.slice(0, start) +
+                            emoji +
+                            value.slice(end)
+                          ).slice(0, MAX_BODY_LENGTH),
+                        );
+                        setEmojiOpen(false);
+                        requestAnimationFrame(() => {
+                          el?.focus();
+                          el?.setSelectionRange(
+                            start + emoji.length,
+                            start + emoji.length,
+                          );
+                        });
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+          <span className="compose-divider" />
+          <button
+            className="send-button"
+            aria-label="Save message locally"
+            disabled={!value.trim()}
+            onClick={send}
+          >
+            <Icon name="arrow" size={20} />
+          </button>
+        </div>
       </div>
-      <p className="mt-2 px-1 text-[11px] text-nm-muted">
-        Enter to send · Shift+Enter for newline · Bodies stay E2EE (stubbed locally in MVP)
-      </p>
+      <div className="compose-meta">
+        <span>
+          <Icon name="info" size={11} /> Local demo · Messages are not delivered
+        </span>
+        <span>
+          {value.length > 3500
+            ? `${value.length}/${MAX_BODY_LENGTH}`
+            : "Enter to send · Shift + Enter for a new line"}
+        </span>
+      </div>
     </div>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

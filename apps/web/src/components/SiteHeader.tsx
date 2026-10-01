@@ -1,41 +1,54 @@
 "use client";
-
+import { useState } from "react";
 import Link from "next/link";
-import { PRODUCT } from "@midnight-messenger/shared";
-
-export function SiteHeader({ solid }: { solid?: boolean }) {
+import { usePathname } from "next/navigation";
+import { Brand } from "./Brand";
+import { Icon } from "./Icon";
+export function SiteHeader() {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   return (
-    <header
-      className={`sticky top-0 z-40 ${solid ? "nm-glass" : "bg-transparent"}`}
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="group flex items-center gap-2.5" aria-label="Night Messenger home">
-          <span className="nm-seal h-9 w-9 rounded-lg text-base" title="夜 — night">
-            {PRODUCT.brandMark}
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight text-nm-text">
-            {PRODUCT.name}
-          </span>
-          <span className="hidden rounded-full border border-nm-border bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-nm-accent-soft sm:inline">
-            Free & open
-          </span>
-        </Link>
-        <nav className="flex items-center gap-1 sm:gap-2" aria-label="Primary">
-          <Link href="/security" className="nm-btn nm-btn-ghost hidden px-3 py-2 text-sm sm:inline-flex">
-            Trust & security
+    <header className="site-header">
+      <div className="container header-inner">
+        <Brand />
+        <nav
+          className={`site-nav ${open ? "is-open" : ""}`}
+          id="main-navigation"
+          aria-label="Main navigation"
+          onClick={() => setOpen(false)}
+        >
+          <Link href="/#experience">The experience</Link>
+          <Link href="/#how-it-works">How it works</Link>
+          <Link
+            href="/security"
+            aria-current={pathname.startsWith("/security") ? "page" : undefined}
+          >
+            Our approach
           </Link>
           <a
-            href={PRODUCT.repoUrl}
+            href="https://github.com/Kshot3000/Night-Messenger-"
             target="_blank"
             rel="noreferrer"
-            className="nm-btn nm-btn-ghost px-3 py-2 text-sm"
+            className="nav-github"
           >
-            GitHub
+            <Icon name="github" size={17} /> Source code{" "}
+            <Icon name="arrowUp" size={13} />
           </a>
-          <Link href="/onboarding" className="nm-btn nm-btn-primary px-4 py-2 text-sm">
-            Open app
-          </Link>
         </nav>
+        <div className="header-actions">
+          <Link href="/app" className="button button-light button-small">
+            Open app <Icon name="arrowUp" size={16} />
+          </Link>
+          <button
+            className="icon-button menu-toggle"
+            aria-label={open ? "Close navigation" : "Open navigation"}
+            aria-expanded={open}
+            aria-controls="main-navigation"
+            onClick={() => setOpen(!open)}
+          >
+            <Icon name={open ? "close" : "menu"} />
+          </button>
+        </div>
       </div>
     </header>
   );

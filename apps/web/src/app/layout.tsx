@@ -1,38 +1,46 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+import { WalletProvider } from "@/hooks/useWallet";
 
 /** Live GitHub Pages URL (repo name includes trailing hyphen). */
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://kshot3000.github.io/Night-Messenger-").replace(
-  /\/$/,
-  "",
-);
+const siteUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  "https://kshot3000.github.io/Night-Messenger-"
+).replace(/\/$/, "");
 const siteUrlSlash = `${siteUrl}/`;
 const ogImage = `${siteUrl}/og.png`;
-const icon = (path: string) => `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+const icon = (path: string) =>
+  `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrlSlash),
   title: {
-    default: "Night Messenger — Private DMs on Midnight",
+    default: "Night Messenger — Your words. Your space.",
     template: "%s · Night Messenger",
   },
   description:
-    "Free & open-source private messaging on Midnight. E2EE bodies, on-chain existence commitments, selective disclosure — no paywalls.",
+    "A calmer messaging experience for the Midnight ecosystem. Explore a free, open-source local preview.",
   applicationName: "Night Messenger",
   authors: [{ name: "Kshot", url: "https://github.com/Kshot3000" }],
-  keywords: ["Midnight", "privacy", "messenger", "ZK", "selective disclosure", "Lace", "E2EE"],
+  keywords: [
+    "Midnight",
+    "privacy",
+    "messenger",
+    "ZK",
+    "selective disclosure",
+    "Lace",
+    "E2EE",
+  ],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrlSlash,
     siteName: "Night Messenger",
-    title: "Night Messenger — Private DMs on Midnight",
+    title: "Night Messenger — Your words. Your space.",
     description:
-      "1:1 DMs where plaintext stays encrypted, existence can be proven on-chain, and you choose what to disclose. Free & open source.",
+      "Your words. Not the world’s. Explore Night Messenger, an open-source local messaging preview for the Midnight ecosystem.",
     images: [
       {
         url: ogImage,
@@ -45,7 +53,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Night Messenger",
-    description: "Private messaging on Midnight with selective disclosure. Free & open source.",
+    description:
+      "A calmer messaging experience for Midnight. Explore the free, open-source local preview.",
     images: [ogImage],
   },
   icons: {
@@ -62,13 +71,21 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
+      >
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
+        <WalletProvider>{children}</WalletProvider>
+      </body>
     </html>
   );
 }

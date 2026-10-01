@@ -1,141 +1,128 @@
-/**
- * Lace / Midnight wallet discovery.
- *
- * Lace injects under a fresh UUID key on `window.midnight`.
- * Do NOT hardcode `window.midnight.mnLace` — enumerate with Object.values / Object.keys.
- *
- * @see https://docs.midnight.network/guides/react-wallet-connect
- *
- * TODO: pin @midnight-ntwrk/dapp-connector-api when wiring production connect.
+/** Minimal Midnight DApp Connector v4 surface used by this preview.
+ * https://github.com/midnightntwrk/midnight-dapp-connector-api
+ * Wallets are discovered by their injected key, never a hardcoded provider name.
  */
-
-import type { WalletSession } from './types';
+import type { WalletSession } from "./types";
 
 export interface MidnightInitialApiStub {
   name?: string;
   icon?: string;
   rdns?: string;
   apiVersion?: string;
-  connect?: (networkId?: string) => Promise<MidnightConnectedApiStub>;
-  enable?: () => Promise<unknown>;
-  isEnabled?: () => Promise<boolean>;
+  connect?: (networkId: string) => Promise<MidnightConnectedApiStub>;
 }
-
 export interface MidnightConnectedApiStub {
-  getShieldedAddresses?: () => Promise<{ shieldedAddress?: string } | string[]>;
-  getConnectionStatus?: () => Promise<boolean>;
+  getShieldedAddresses?: () => Promise<{ shieldedAddress?: string }>;
 }
-
 export interface DiscoveredProvider {
   injectionKey: string;
   api: MidnightInitialApiStub;
 }
 
-function assertBrowser(): void {
-  if (typeof window === 'undefined') {
-    throw new Error('Midnight wallet connector is browser-only (window undefined).');
-  }
-}
-
-/** Enumerate wallets via Object.keys — never hardcode mnLace. */
 export function discoverMidnightProviders(): DiscoveredProvider[] {
-  assertBrowser();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const midnight = (window as any).midnight as Record<string, MidnightInitialApiStub> | undefined;
-  if (!midnight) return [];
-
-  const providers: DiscoveredProvider[] = [];
-  for (const key of Object.keys(midnight)) {
-    const api = midnight[key];
-    if (!api) continue;
-    if (typeof api.connect !== 'function' && typeof api.enable !== 'function') continue;
-    providers.push({ injectionKey: key, api });
-  }
-  return providers;
+  if (typeof window === "undefined") return [];
+  const injected = (window as Window & { midnight?: unknown }).midnight;
+  if (!injected || typeof injected !== "object") return [];
+  return Object.entries(injected).flatMap(([injectionKey, value]) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      typeof value.connect !== "function"
+    )
+      return [];
+    return [{ injectionKey, api: value as MidnightInitialApiStub }];
+  });
 }
-
-/** Object.values-first enumeration (same rule, values style). */
 export function listMidnightApis(): MidnightInitialApiStub[] {
-  assertBrowser();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const midnight = (window as any).midnight as Record<string, MidnightInitialApiStub> | undefined;
-  if (!midnight) return [];
-  return Object.values(midnight).filter(
-    (api) => api && (typeof api.connect === 'function' || typeof api.enable === 'function'),
+  return discoverMidnightProviders().map((provider) => provider.api);
+}
+export function abbreviateAddress(address: string, head = 8, tail = 6): string {
+  return address.length <= head + tail + 3
+    ? address
+    : `${address.slice(0, head)}…${address.slice(-tail)}`;
+}
+export function safeWalletLabel(api: MidnightInitialApiStub): string {
+  return (
+    String(api.name ?? "Midnight wallet")
+      .replace(/[\u0000-\u001F<>]/g, "")
+      .slice(0, 60) || "Midnight wallet"
   );
 }
-
-export function abbreviateAddress(addr: string, head = 8, tail = 6): string {
-  if (addr.length <= head + tail + 3) return addr;
-  return `${addr.slice(0, head)}…${addr.slice(-tail)}`;
-}
-
-export function safeWalletLabel(api: MidnightInitialApiStub): string {
-  return String(api.name ?? 'Midnight wallet').replace(/[\u0000-\u001F<>]/g, '');
-}
-
-/**
- * Connect to first discovered provider (or chosen injection key).
- * TODO: wallet picker when multiple providers / duplicate rdns.
- */
 export async function connectMidnightWallet(options?: {
   injectionKey?: string;
   networkId?: string;
+  timeoutMs?: number;
 }): Promise<WalletSession> {
-  try {
-    assertBrowser();
-  } catch {
-    return { status: 'unavailable', error: 'Wallet connect requires a browser.' };
-  }
-
-  const providers = discoverMidnightProviders();
-  if (providers.length === 0) {
+  if (typeof window === "undefined")
     return {
-      status: 'unavailable',
-      error:
-        'No Midnight wallet found. Install Lace with Midnight enabled, then refresh. Enumerate Object.values(window.midnight) — do not hardcode mnLace.',
+      status: "unavailable",
+      error: "Wallet connect requires a browser.",
     };
-  }
-
-  const chosen =
-    (options?.injectionKey
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const providers = discoverMidnightProviders();
+    if (!providers.length)
+      return {
+        status: "unavailable",
+        error:
+          "No compatible Midnight wallet found. Enable a wallet with DApp Connector v4 support, then try again. You can explore without a wallet.",
+      };
+    const chosen = options?.injectionKey
       ? providers.find((p) => p.injectionKey === options.injectionKey)
-      : undefined) ?? providers[0]!;
-
-  const networkId = options?.networkId ?? 'preprod';
-
-  try {
-    let shieldedAddress: string | undefined;
-
-    if (typeof chosen.api.connect === 'function') {
-      const connected = await chosen.api.connect(networkId);
-      if (connected?.getShieldedAddresses) {
-        const addrs = await connected.getShieldedAddresses();
-        if (Array.isArray(addrs)) {
-          shieldedAddress = typeof addrs[0] === 'string' ? addrs[0] : undefined;
-        } else if (addrs && typeof addrs === 'object') {
-          shieldedAddress = addrs.shieldedAddress;
-        }
-      }
-    } else if (typeof chosen.api.enable === 'function') {
-      await chosen.api.enable();
-    }
-
-    return {
-      status: 'connected',
-      injectionKey: chosen.injectionKey,
-      walletName: safeWalletLabel(chosen.api),
-      rdns: chosen.api.rdns,
-      apiVersion: chosen.api.apiVersion,
-      shieldedAddress,
-      addressPreview: shieldedAddress ? abbreviateAddress(shieldedAddress) : undefined,
+      : providers[0];
+    if (!chosen)
+      return {
+        status: "unavailable",
+        error:
+          "That wallet is no longer available. Close this dialog and choose a wallet again.",
+      };
+    const attempt = async (): Promise<WalletSession> => {
+      const connected = await chosen.api.connect!(
+        options?.networkId ?? "preprod",
+      );
+      if (!connected || typeof connected.getShieldedAddresses !== "function")
+        throw new Error(
+          "This wallet returned an unsupported connection. Please update your wallet extension.",
+        );
+      const addresses = await connected.getShieldedAddresses();
+      const address = addresses?.shieldedAddress;
+      if (typeof address !== "string" || !address.trim())
+        throw new Error(
+          "The wallet did not provide a shielded address. Unlock it and try again.",
+        );
+      return {
+        status: "connected",
+        injectionKey: chosen.injectionKey,
+        walletName: safeWalletLabel(chosen.api),
+        rdns: chosen.api.rdns,
+        apiVersion: chosen.api.apiVersion,
+        shieldedAddress: address,
+        addressPreview: abbreviateAddress(address),
+      };
     };
-  } catch (err) {
+    return await Promise.race([
+      attempt(),
+      new Promise<WalletSession>((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new Error(
+                "The wallet did not respond. Check its permission prompt, then try again.",
+              ),
+            ),
+          options?.timeoutMs ?? 30000,
+        );
+      }),
+    ]);
+  } catch (error) {
     return {
-      status: 'disconnected',
-      injectionKey: chosen.injectionKey,
-      walletName: safeWalletLabel(chosen.api),
-      error: err instanceof Error ? err.message : 'Failed to connect wallet',
+      status: "disconnected",
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 240)
+          : "Connection was declined or interrupted. You can try again.",
     };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

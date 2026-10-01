@@ -1,90 +1,170 @@
 "use client";
-
-import type { Conversation } from "@midnight-messenger/shared";
+import type { LocalConversation } from "@/lib/messenger-store";
+import { lastActivity } from "@/lib/messenger-store";
 import { Avatar } from "./Avatar";
-import { formatRelativeTime } from "@/lib/format";
-
+import { Icon } from "./Icon";
+function relative(at: string) {
+  const date = new Date(at);
+  const days = Math.floor((Date.now() - date.getTime()) / 86400000);
+  return days > 0
+    ? days === 1
+      ? "Yesterday"
+      : date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 export function ConversationList({
   conversations,
   activeId,
   onSelect,
   search,
   onSearch,
+  onCreate,
+  filter,
+  onFilter,
+  unreadCount,
 }: {
-  conversations: Conversation[];
-  activeId?: string;
+  conversations: LocalConversation[];
+  activeId: string | null;
   onSelect: (id: string) => void;
   search: string;
-  onSearch: (q: string) => void;
+  onSearch: (query: string) => void;
+  onCreate: () => void;
+  filter: "all" | "unread" | "archived";
+  onFilter: (filter: "all" | "unread" | "archived") => void;
+  unreadCount: number;
 }) {
-  const filtered = conversations.filter((c) =>
-    c.peer.displayName.toLowerCase().includes(search.toLowerCase()),
-  );
-
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-nm-border px-4 pb-3 pt-4">
-        <label className="sr-only" htmlFor="nm-search">
-          Search conversations
-        </label>
+    <>
+      <div className="list-heading">
+        <div>
+          <p className="eyebrow">YOUR LITTLE CORNER</p>
+          <h1>
+            {filter === "archived" ? "Archived" : "Messages"}
+            <span>{conversations.length}</span>
+          </h1>
+        </div>
+        <button
+          className="new-chat-button"
+          aria-label="New conversation"
+          title="New conversation"
+          onClick={onCreate}
+        >
+          <Icon name="plus" size={20} />
+        </button>
+      </div>
+      <div className="search-field">
+        <Icon name="search" size={16} />
         <input
-          id="nm-search"
-          className="nm-input py-2.5 text-sm"
-          placeholder="Search"
+          id="conversation-search"
+          type="search"
+          aria-label="Search conversations and messages"
+          placeholder="Search your conversations"
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           autoComplete="off"
         />
+        <span className="key-hint">⌘ K</span>
       </div>
-      <ul className="nm-scrollbar flex-1 overflow-y-auto py-1" role="listbox" aria-label="Conversations">
-        {filtered.length === 0 ? (
-          <li className="px-5 py-10 text-center text-sm text-nm-muted">
-            No chats match. Start a DM when you&apos;re ready.
-          </li>
+      <div className="list-tabs" role="group" aria-label="Filter conversations">
+        {(["all", "unread", "archived"] as const).map((tab) => (
+          <button
+            key={tab}
+            aria-pressed={filter === tab}
+            className={filter === tab ? "selected" : ""}
+            onClick={() => onFilter(tab)}
+          >
+            {tab === "all"
+              ? "All chats"
+              : tab === "unread"
+                ? "Unread"
+                : "Archived"}
+            {tab === "unread" && unreadCount > 0 && <span>{unreadCount}</span>}
+          </button>
+        ))}
+      </div>
+      <div className="conversation-scroll">
+        <p className="list-section">
+          {search
+            ? "SEARCH RESULTS"
+            : filter === "archived"
+              ? "SAVED FOR LATER"
+              : "CONVERSATIONS"}
+        </p>
+        {conversations.length === 0 ? (
+          <div className="list-empty">
+            <Icon name={search ? "search" : "chat"} size={26} />
+            <h2>
+              {search
+                ? "Nothing here just yet."
+                : filter === "unread"
+                  ? "All caught up."
+                  : "A little room to talk."}
+            </h2>
+            <p>
+              {search
+                ? "Try a different name or a word from a message."
+                : filter === "unread"
+                  ? "Your conversations are waiting when you need them."
+                  : "Start a local conversation to make this space yours."}
+            </p>
+            {search || filter !== "all" ? (
+              <button
+                className="text-link"
+                onClick={() => {
+                  onSearch("");
+                  onFilter("all");
+                }}
+              >
+                Show all chats <Icon name="arrow" size={14} />
+              </button>
+            ) : (
+              <button className="text-link" onClick={onCreate}>
+                Start a conversation <Icon name="plus" size={14} />
+              </button>
+            )}
+          </div>
         ) : (
-          filtered.map((c) => {
-            const active = c.id === activeId;
-            return (
+          <ul className="conversation-list" aria-label="Conversations">
+            {conversations.map((c) => (
               <li key={c.id}>
                 <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
                   onClick={() => onSelect(c.id)}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
-                    active ? "bg-nm-accent/15" : "hover:bg-nm-hover/70"
-                  }`}
+                  className={`conversation-item ${c.id === activeId ? "selected" : ""}`}
+                  aria-current={c.id === activeId ? "true" : undefined}
+                  aria-label={`${c.name}${c.unread ? `, ${c.unread} unread messages` : ""}`}
                 >
-                  <Avatar name={c.peer.displayName} hue={c.peer.avatarHue} online={c.unreadCount > 0} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[15px] font-semibold tracking-tight">
-                        {c.peer.displayName}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-nm-muted">
-                        {formatRelativeTime(c.lastMessageAt)}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-2">
-                      <p className="truncate text-[13px] text-nm-muted">{c.lastMessagePreview}</p>
-                      {c.hasCommitment ? (
-                        <span className="shrink-0 text-[10px] text-nm-accent-soft" title="Has commitment">
-                          ◆
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  {c.unreadCount > 0 ? (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-nm-accent px-1.5 text-[11px] font-bold text-nm-on-accent">
-                      {c.unreadCount}
+                  <Avatar name={c.name} hue={c.hue} size={43} />
+                  <span className="conversation-copy">
+                    <span className="conversation-topline">
+                      <strong>{c.name}</strong>
+                      <time dateTime={lastActivity(c)}>
+                        {relative(lastActivity(c))}
+                      </time>
                     </span>
-                  ) : null}
+                    <span className="conversation-bottomline">
+                      <span>
+                        {c.draft ? (
+                          <>
+                            <em>Draft: </em>
+                            {c.draft}
+                          </>
+                        ) : (
+                          (c.messages.at(-1)?.body ?? "Start with a hello.")
+                        )}
+                      </span>
+                      {c.unread > 0 ? (
+                        <span className="unread-count">{c.unread}</span>
+                      ) : c.pinned ? (
+                        <Icon name="pin" size={12} />
+                      ) : null}
+                    </span>
+                  </span>
                 </button>
               </li>
-            );
-          })
+            ))}
+          </ul>
         )}
-      </ul>
-    </div>
+      </div>
+    </>
   );
 }

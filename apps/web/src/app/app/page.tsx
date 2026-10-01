@@ -3,7 +3,7 @@ import { ChatShell } from "@/components/ChatShell";
 
 export const metadata: Metadata = {
   title: "Chats",
-  description: "Night Messenger chat — selective privacy 1:1 DMs",
+  description: "Explore Night Messenger: a working local messaging preview.",
 };
 
 export default function AppPage() {

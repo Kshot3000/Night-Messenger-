@@ -1,27 +1,25 @@
 {
   "name": "night-messenger",
   "private": true,
-  "version": "0.1.0",
-  "description": "Night Messenger — free private DMs on Midnight with selective disclosure",
+  "version": "0.2.0",
+  "description": "Night Messenger \u2014 free private DMs on Midnight with selective disclosure",
   "scripts": {
     "dev": "pnpm --filter @midnight-messenger/web dev",
     "dev:web": "pnpm --filter @midnight-messenger/web dev",
     "dev:mobile": "pnpm --filter @midnight-messenger/mobile start",
-    "build": "pnpm -r --filter=./packages/* build && pnpm --filter @midnight-messenger/web build",
+    "build": "pnpm build:web",
     "build:web": "pnpm --filter @midnight-messenger/web build",
-    "lint": "pnpm -r lint --if-present",
-    "typecheck": "pnpm -r typecheck --if-present"
+    "lint": "pnpm --filter @midnight-messenger/web lint",
+    "typecheck": "pnpm --filter @midnight-messenger/shared typecheck && pnpm --filter @midnight-messenger/web typecheck",
+    "build:pages": "node scripts/build-pages.mjs",
+    "test": "node --experimental-strip-types --test apps/web/tests/*.test.mjs packages/shared/tests/*.test.mjs",
+    "format": "prettier --write apps/web/src packages/shared/src packages/shared/tests apps/web/tests"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
-  "packageManager": "pnpm@9.15.9",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "unrs-resolver",
-      "esbuild",
-      "@tailwindcss/oxide"
-    ]
+  "packageManager": "pnpm@11.25.0",
+  "devDependencies": {
+    "prettier": "3.8.1"
   }
 }

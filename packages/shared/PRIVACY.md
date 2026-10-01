@@ -1,63 +1,26 @@
-# Night Messenger — Selective Privacy Model
+# Night Messenger — Privacy and implementation status
 
-High-level privacy architecture for 1:1 DMs on [Midnight](https://midnight.network).
-Contract interfaces are stubs (`TODO`) until Compact circuits land.
+## Today: local preview
 
-## Layers at a glance
+The web app is a local product demo. Message text, conversation names, reactions, drafts, and preferences are stored as **readable data in browser localStorage**. Messages are not sent to another person, encrypted, committed to a blockchain, or accompanied by real proofs. Sample conversations are fictional.
 
-| Layer | What lives here | Who can see it |
+A script or person with access to this origin's browser storage can read that data. Browser/device access control is not end-to-end encryption. Use sample content only. Local data does not synchronize across devices or browser tabs.
+
+JSON exports and workspace backups are readable copies. Backup restore validates the workspace schema and requires confirmation before replacing current conversations. Reset restores the sample chats; clearing site data also removes profile/preferences. Downloaded files must be removed separately.
+
+Optional wallet connection enumerates compatible `window.midnight` providers and uses `connect('preprod')` plus `getShieldedAddresses()`. It does not request a transaction, perform identity verification, or establish an encrypted messaging session. The shielded address is held in memory for the current app session. Disconnect clears that state; revoke site access in the wallet extension separately.
+
+The original mobile starter and shared mock API are prototypes. Their mock message/proof values are not security guarantees. Contracts are unimplemented interfaces.
+
+## Intended architecture — not implemented
+
+| Layer | Intended behavior | Current status |
 | --- | --- | --- |
-| **On-chain / proven** | Message existence commitments, optional sender/recipient membership proofs, user-chosen metadata attributes | Network / verifiers with the disclosed proof |
-| **Off-chain / encrypted** | Message plaintext (E2EE between parties) | Only intended recipients with session keys |
-| **Selective disclosure** | Proofs of delivery, conversation membership, or message attributes **without** revealing content | Parties / apps the user chooses to prove to |
+| Encrypted transport | Authenticated key agreement, per-device keys, ciphertext relay | Not implemented |
+| Optional commitments | Commit to message existence without putting plaintext on-chain | Contract stubs only |
+| Selective disclosure | Prove a specific fact without revealing surrounding conversation | No real proof generation |
+| Identity and recovery | Verify peers, manage devices, recover safely | Not implemented |
 
-Midnight’s ZK + selective disclosure model lets a user prove *facts about* a message (e.g. “I sent a sealed DM to this recipient before time T”) without opening the ciphertext.
+A production release requires a reviewed protocol, key lifecycle, relay authentication, replay protection, deletion/retention policy, delivery semantics, and independent security review. Never treat a local preview indicator, wallet connection, or stubbed proof response as evidence that any of those systems exists.
 
-## On-chain / proven
-
-- **Message existence commitment** — a binding commitment (e.g. hash of ciphertext + salt + thread id) posted or witnessed on Midnight so existence can be proven later.
-- **Sender / recipient proofs** — when needed, prove you are a party to a conversation (membership) without revealing other participants or content.
-- **Optional metadata** — the user *opts in* to reveal attributes (timestamp bucket, thread tag, delivery flag). Nothing is public by default beyond what the circuit and policy allow.
-
-> **TODO (contracts):** Compact circuits for `commitMessage`, `proveMembership`, `proveAttribute`. See `/contracts`.
-
-## Off-chain / encrypted
-
-- Message bodies are encrypted end-to-end between the two parties (device/session keys).
-- Relays or indexers (when added) store only ciphertext + commitments — they cannot read plaintext.
-- MVP uses local mock storage; real transport is stubbed.
-
-> **TODO:** Noise/X3DH-style (or Midnight-native) key agreement; never invent fake crypto APIs in production paths.
-
-## Selective disclosure
-
-Users can disclose **proofs**, not plaintext:
-
-1. **Proof of delivery** — “recipient acknowledged commitment C” without showing the body.
-2. **Proof of membership** — “I am a party to thread T” without listing others.
-3. **Proof of attributes** — e.g. message sent in a time window, marked urgent, or satisfying a policy — without opening content.
-
-UI surfaces these as explicit actions (“Prove delivery”, “Disclose timestamp”) so disclosure is intentional.
-
-## What is public vs private vs selective (MVP defaults)
-
-| Data | Default |
-| --- | --- |
-| Wallet address (shielded) | Private; shown abbreviated in-app after connect |
-| Conversation list | Local / private to device |
-| Message plaintext | Private (E2EE); never on-chain |
-| Existence commitment | On-chain when user sends (stubbed) |
-| Delivery receipt | Selective — user opts to prove |
-| Media / groups | Out of scope for MVP |
-
-## Honesty for this MVP
-
-- Wallet connect enumerates `window.midnight` via `Object.values` / `Object.keys` (not hardcoded `mnLace`).
-- Contracts and proof calls are **stubs** labeled `TODO`.
-- No real Midnight node, Compact compile, or proof server in this cut.
-- Mock conversations appear when the wallet is not connected so UX can be explored.
-
-## References
-
-- Midnight docs: selective disclosure & DApp Connector
-- Lace injects under UUID keys — enumerate providers; never hardcode `window.midnight.mnLace`
+Connector reference: [Midnight DApp Connector specification](https://github.com/midnightntwrk/midnight-dapp-connector-api/blob/main/docs/api/_media/SPECIFICATION.md).

@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
-# Build apps/web static export and push to gh-pages (GitHub Pages).
+# Build and publish with a normal commit; preserve the existing Pages history.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
-export GITHUB_PAGES=true
-export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://kshot3000.github.io/Night-Messenger-}"
-pnpm --filter @midnight-messenger/web build
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
-cp -a apps/web/out/. "$WORK/"
-touch "$WORK/.nojekyll"
-cd "$WORK"
-git init -b gh-pages
-git config user.name "${GIT_AUTHOR_NAME:-Kshot3000}"
-git config user.email "${GIT_AUTHOR_EMAIL:-kshot3000@users.noreply.github.com}"
-git add -A
-git commit -m "Deploy Night Messenger static site $(date -u +%Y-%m-%dT%H:%MZ)"
-git remote add origin https://github.com/Kshot3000/Night-Messenger-.git
-git push -f origin gh-pages
-echo "Deployed → https://kshot3000.github.io/Night-Messenger-/"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+pnpm build:pages
+PUBLISH_DIR="$(mktemp -d)"
+trap 'rm -rf "$PUBLISH_DIR"' EXIT
+git clone --single-branch --branch gh-pages https://github.com/Kshot3000/Night-Messenger-.git "$PUBLISH_DIR"
+# Delete only the temporary clone's tracked deploy files.
+git -C "$PUBLISH_DIR" rm -r --ignore-unmatch .
+cp -a apps/web/out/. "$PUBLISH_DIR/"
+git -C "$PUBLISH_DIR" add -A
+if git -C "$PUBLISH_DIR" diff --cached --quiet; then
+  echo "The published site is already current."
+  exit 0
+fi
+git -C "$PUBLISH_DIR" -c user.name="${GIT_AUTHOR_NAME:-Kshot3000}" -c user.email="${GIT_AUTHOR_EMAIL:-kshot3000@users.noreply.github.com}" commit -m "Publish Night Messenger website"
+git -C "$PUBLISH_DIR" push origin HEAD:gh-pages
+echo "Published: https://kshot3000.github.io/Night-Messenger-/"

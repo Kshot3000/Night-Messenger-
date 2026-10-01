@@ -1,144 +1,381 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, Conversation } from "@midnight-messenger/shared";
-import { MOCK_PEER_SELF_ID, createStubMessengerApi } from "@midnight-messenger/shared";
+import type { Action, LocalConversation, Message } from "@/lib/messenger-store";
 import { Avatar } from "./Avatar";
-import { PrivacyBadge } from "./PrivacyBadge";
+import { Icon } from "./Icon";
 import { ComposeBox } from "./ComposeBox";
-import { formatMessageTime } from "@/lib/format";
-
-const api = createStubMessengerApi();
-
+import { Modal } from "./Modal";
+import { MAX_BODY_LENGTH } from "@/lib/messenger-store";
 export function ChatThread({
-  conversation,
+  conversation: c,
   onBack,
+  dispatch,
+  onDetails,
+  detailsOpen,
+  onCreate,
+  compact,
 }: {
-  conversation: Conversation | null;
-  onBack?: () => void;
+  conversation: LocalConversation | null;
+  onBack: () => void;
+  dispatch: (action: Action) => void;
+  onDetails: () => void;
+  detailsOpen: boolean;
+  onCreate: () => void;
+  compact: boolean;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
+  const [editing, setEditing] = useState<Message | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [deleting, setDeleting] = useState<Message | null>(null);
+  const bottom = useRef<HTMLDivElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [reactionId, setReactionId] = useState<string | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    if (!conversation) {
-      setMessages([]);
-      return;
-    }
-    api.listMessages(conversation.id).then((m) => {
-      if (!cancelled) setMessages(m);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [conversation]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  if (!conversation) {
+    bottom.current?.scrollIntoView({ behavior: "auto", block: "end" });
+  }, [c?.id, c?.messages.length]);
+  const messages =
+    c?.messages.filter(
+      (m) =>
+        !query.trim() ||
+        m.body.toLowerCase().includes(query.trim().toLowerCase()),
+    ) ?? [];
+  if (!c)
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-        <div className="nm-seal flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-serif">夜</div>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Pick a conversation</h2>
-          <p className="mt-1 max-w-sm text-sm text-nm-muted">
-            Your list shows mock chats so you can feel the product. Connect Lace when you&apos;re ready for real
-            identity.
-          </p>
-        </div>
-        <ul className="mt-2 space-y-2 text-left text-sm text-nm-muted">
-          <li className="flex gap-2"><span className="text-nm-accent">●</span> Bodies encrypted off-chain</li>
-          <li className="flex gap-2"><span className="text-nm-accent">●</span> Commit existence when you seal</li>
-          <li className="flex gap-2"><span className="text-nm-accent">●</span> Disclose proofs only on purpose</li>
-        </ul>
+      <div className="chat-welcome">
+        <span className="welcome-moon">
+          <Icon name="moon" size={46} />
+        </span>
+        <p className="eyebrow">A LITTLE LESS PUBLIC. A LOT MORE YOU.</p>
+        <h2>
+          Good conversations
+          <br />
+          <span>start with a hello.</span>
+        </h2>
+        <p>
+          Choose a chat or start a new one.
+          <br />
+          Make yourself at home.
+        </p>
+        <button className="button button-accent" onClick={onCreate}>
+          New conversation <Icon name="plus" size={17} />
+        </button>
+        <small>Local preview · No messages leave this browser</small>
       </div>
     );
-  }
-
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-nm-border px-3 py-3 sm:px-4">
-        {onBack ? (
-          <button
-            type="button"
-            className="rounded-full p-2 text-nm-muted hover:bg-nm-hover lg:hidden"
-            onClick={onBack}
-            aria-label="Back to conversations"
-          >
-            ←
-          </button>
-        ) : null}
-        <Avatar name={conversation.peer.displayName} hue={conversation.peer.avatarHue} online size={42} />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[16px] font-semibold tracking-tight">{conversation.peer.displayName}</h2>
-          <p className="truncate font-mono text-[11px] text-nm-muted">
-            {conversation.peer.addressPreview ?? "shielded peer"} · selective privacy
+    <div className={`chat-thread ${compact ? "compact-messages" : ""}`}>
+      <header className="thread-header">
+        <button
+          className="icon-button thread-back"
+          onClick={onBack}
+          aria-label="Back to conversations"
+        >
+          <Icon name="back" />
+        </button>
+        <Avatar name={c.name} hue={c.hue} size={42} />
+        <div className="thread-person">
+          <h2>{c.name}</h2>
+          <p>
+            <span className="status-dot" /> Local conversation
           </p>
         </div>
-        <span className="hidden rounded-full border border-nm-border px-2.5 py-1 text-[11px] text-nm-accent-soft sm:inline">
-          1:1 DM
-        </span>
+        <div className="thread-actions">
+          <button
+            className={`icon-button ${searchOpen ? "active" : ""}`}
+            onClick={() => {
+              setSearchOpen(!searchOpen);
+              setQuery("");
+            }}
+            aria-label="Search this conversation"
+            aria-expanded={searchOpen}
+          >
+            <Icon name="search" size={19} />
+          </button>
+          <button
+            className={`icon-button ${detailsOpen ? "active" : ""}`}
+            onClick={onDetails}
+            aria-label="Conversation details"
+            aria-expanded={detailsOpen}
+          >
+            <Icon name="info" size={20} />
+          </button>
+        </div>
       </header>
-
-      <div className="nm-scrollbar flex-1 space-y-3 overflow-y-auto px-3 py-4 sm:px-5">
-        {messages.map((m) => {
-          const mine = m.senderId === MOCK_PEER_SELF_ID;
-          return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"} nm-fade-up`}>
-              <div className={`max-w-[85%] sm:max-w-[70%] ${mine ? "items-end" : "items-start"} flex flex-col gap-1`}>
-                <div
-                  className={`rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed shadow-md ${
-                    mine
-                      ? "rounded-br-md bg-gradient-to-br from-nm-accent to-nm-accent-deep text-nm-on-accent"
-                      : "rounded-bl-md border border-nm-border bg-nm-panel text-nm-text"
-                  }`}
-                >
-                  {m.body}
-                </div>
-                <div className={`flex items-center gap-2 px-1 ${mine ? "flex-row-reverse" : ""}`}>
-                  <span className="text-[11px] text-nm-muted">{formatMessageTime(m.createdAt)}</span>
-                  <PrivacyBadge visibility={m.visibility} />
-                  {mine ? (
+      {searchOpen && (
+        <div className="thread-search">
+          <Icon name="search" size={16} />
+          <input
+            type="search"
+            aria-label="Search messages in this conversation"
+            placeholder="Find something in this conversation…"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <span>
+            {messages.length} {messages.length === 1 ? "message" : "messages"}
+          </span>
+          <button
+            className="icon-button"
+            aria-label="Close message search"
+            onClick={() => {
+              setSearchOpen(false);
+              setQuery("");
+            }}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      )}
+      <div className="message-scroll" onClick={() => setReactionId(null)}>
+        <div className="conversation-intro">
+          <span>
+            <Icon name="moon" size={16} />
+          </span>
+          <p>A little space for you and {c.name}.</p>
+          <small>Sample content only. This preview is not encrypted.</small>
+        </div>
+        <div
+          className="messages"
+          aria-label={`Messages with ${c.name}`}
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+        >
+          {messages.map((m, index) => {
+            const previous = messages[index - 1];
+            const newDay =
+              !previous ||
+              new Date(m.at).toDateString() !==
+                new Date(previous.at).toDateString();
+            const mine = m.author === "me";
+            return (
+              <div key={m.id}>
+                {newDay && (
+                  <div className="day-divider">
+                    <span>
+                      {new Date(m.at).toDateString() ===
+                      new Date().toDateString()
+                        ? "Today"
+                        : new Date(m.at).toLocaleDateString(undefined, {
+                            month: "long",
+                            day: "numeric",
+                          })}
+                    </span>
+                  </div>
+                )}
+                <div className={`message-row ${mine ? "mine" : "theirs"}`}>
+                  {!mine && <Avatar name={c.name} hue={c.hue} size={28} />}
+                  <div className="message-group">
+                    <div className="message-bubble">{m.body}</div>
+                    <div className="message-meta">
+                      <time dateTime={m.at}>
+                        {new Date(m.at).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                      {m.editedAt && (
+                        <span
+                          title={`Edited ${new Date(m.editedAt).toLocaleString()}`}
+                        >
+                          edited
+                        </span>
+                      )}
+                      {mine && (
+                        <span title="Saved locally, not delivered">
+                          <Icon name="check" size={11} /> Local
+                        </span>
+                      )}
+                      {m.reaction && (
+                        <button
+                          className="reaction-chip"
+                          aria-label={`Remove ${m.reaction} reaction`}
+                          onClick={() =>
+                            dispatch({
+                              type: "reaction",
+                              id: c.id,
+                              messageId: m.id,
+                              emoji: m.reaction!,
+                            })
+                          }
+                        >
+                          {m.reaction} <span>1</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="message-tools">
+                    {mine && (
+                      <>
+                        <button
+                          className="icon-button"
+                          aria-label={`Edit message ${index + 1}`}
+                          onClick={() => {
+                            setEditing(m);
+                            setEditBody(m.body);
+                          }}
+                        >
+                          <Icon name="edit" size={15} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          aria-label={`Delete message ${index + 1}`}
+                          onClick={() => setDeleting(m)}
+                        >
+                          <Icon name="trash" size={15} />
+                        </button>
+                      </>
+                    )}
                     <button
-                      type="button"
-                      className="text-[11px] text-nm-accent-soft hover:underline"
-                      onClick={async () => {
-                        const res = await api.proveDisclosure({ messageId: m.id, kind: "delivery" });
-                        setToast(
-                          res.ok
-                            ? `Delivery proof stub ready (${res.proofStub}) — not a real ZK proof yet`
-                            : "Proof failed",
-                        );
-                        setTimeout(() => setToast(null), 4000);
+                      className="icon-button"
+                      aria-label={`React to message ${index + 1}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReactionId(reactionId === m.id ? null : m.id);
                       }}
+                      aria-expanded={reactionId === m.id}
                     >
-                      Prove delivery
+                      <Icon name="smile" size={16} />
                     </button>
-                  ) : null}
+                    {reactionId === m.id && (
+                      <div
+                        className="reaction-picker"
+                        role="group"
+                        aria-label="Message reactions"
+                      >
+                        {["❤️", "👍", "✨", "😂"].map((emoji) => (
+                          <button
+                            key={emoji}
+                            aria-label={`React ${emoji}`}
+                            onClick={() =>
+                              dispatch({
+                                type: "reaction",
+                                id: c.id,
+                                messageId: m.id,
+                                emoji,
+                              })
+                            }
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+            );
+          })}
+          {messages.length === 0 && (
+            <div className="thread-empty">
+              <Icon name={query ? "search" : "chat"} size={28} />
+              <h3>{query ? "No matching messages." : "Start with a hello."}</h3>
+              <p>
+                {query
+                  ? "Try another word or clear the search."
+                  : "Your first message is a good place to begin."}
+              </p>
             </div>
-          );
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      {toast ? (
-        <div className="mx-4 mb-2 rounded-xl border border-nm-border bg-nm-panel px-3 py-2 text-xs text-nm-accent-soft" role="status">
-          {toast}
+          )}
+          <div ref={bottom} />
         </div>
-      ) : null}
-
+      </div>
       <ComposeBox
-        onSend={async (body) => {
-          const msg = await api.sendMessage(conversation.id, body);
-          setMessages((prev) => [...prev, msg]);
+        key={c.id}
+        name={c.name}
+        value={c.draft}
+        onChange={(body) => dispatch({ type: "draft", id: c.id, body })}
+        onSend={(body) => {
+          setQuery("");
+          setSearchOpen(false);
+          dispatch({
+            type: "send",
+            id: c.id,
+            body,
+            messageId: crypto.randomUUID(),
+            at: new Date().toISOString(),
+          });
         }}
       />
+      {editing && (
+        <Modal title="Edit your message" onClose={() => setEditing(null)}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!editBody.trim()) return;
+              dispatch({
+                type: "edit",
+                id: c.id,
+                messageId: editing.id,
+                body: editBody,
+                at: new Date().toISOString(),
+              });
+              setEditing(null);
+            }}
+          >
+            <label className="field-label" htmlFor="edit-message">
+              Message
+            </label>
+            <textarea
+              className="text-input edit-textarea"
+              id="edit-message"
+              autoFocus
+              value={editBody}
+              maxLength={MAX_BODY_LENGTH}
+              onChange={(event) => setEditBody(event.target.value)}
+            />
+            <p className="field-help">
+              Changes are saved to this local conversation.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button-outline"
+                onClick={() => setEditing(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="button button-accent"
+                disabled={!editBody.trim()}
+              >
+                Save changes <Icon name="check" size={16} />
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {deleting && (
+        <Modal title="Delete this message?" onClose={() => setDeleting(null)}>
+          <p className="modal-description">
+            This removes your message from this browser. This action cannot be
+            undone.
+          </p>
+          <blockquote className="delete-preview">{deleting.body}</blockquote>
+          <div className="modal-actions">
+            <button
+              className="button button-outline"
+              onClick={() => setDeleting(null)}
+            >
+              Keep message
+            </button>
+            <button
+              className="button button-danger"
+              onClick={() => {
+                dispatch({
+                  type: "deleteMessage",
+                  id: c.id,
+                  messageId: deleting.id,
+                });
+                setDeleting(null);
+              }}
+            >
+              Delete message
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

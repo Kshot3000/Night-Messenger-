@@ -1,193 +1,295 @@
 import Link from "next/link";
-import {
-  PRODUCT,
-  PRIVACY_LEGEND,
-  AUDIENCE,
-  WHY_NOT_SIGNAL,
-  ROADMAP,
-} from "@midnight-messenger/shared";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { MessengerPreview } from "@/components/MessengerPreview";
+import { Icon } from "@/components/Icon";
 import { SakuraPetals } from "@/components/SakuraPetals";
 
+const faqs = [
+  [
+    "Can I try it without a wallet?",
+    "Absolutely. Open the app to explore sample conversations, write messages, and create local chats. You can add a display name or try connecting a compatible Midnight wallet whenever you like.",
+  ],
+  [
+    "Are my messages encrypted or sent to other people?",
+    "Not in this preview. Conversations, drafts, and preferences are saved in this browser as readable local data. Messages are not delivered to another person. End-to-end encryption, a message relay, and live Midnight proofs are planned. Please use sample content only.",
+  ],
+  [
+    "What is selective disclosure?",
+    "It is the idea of proving a specific fact, such as delivery, without revealing the contents of a conversation. Night Messenger explores this approach for Midnight. The proof and contract integrations are still in development.",
+  ],
+  [
+    "What happens to my demo conversations?",
+    "They stay in this browser until you clear the app's local data or your browser storage. You can export a conversation as JSON from its details panel. Demo data does not sync across devices.",
+  ],
+  [
+    "Is Night Messenger open source?",
+    "Yes. The web app, Android starter, shared types, and contract interfaces are available on GitHub under the MIT license. You can inspect the code, suggest improvements, or build on it.",
+  ],
+];
 export default function LandingPage() {
   return (
-    <div className="nm-aurora min-h-screen">
+    <div className="landing nm-aurora">
       <SakuraPetals count={20} />
       <SiteHeader />
-      <main>
-        <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
-          <div className="nm-fade-up mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-nm-border bg-white/5 px-3 py-1 text-xs font-medium text-nm-accent-soft">
-              <span className="h-1.5 w-1.5 rounded-full bg-nm-success" />
-              Free &amp; open source · Built for Midnight
-            </p>
-            <h1 className="text-4xl font-semibold tracking-tight text-nm-text sm:text-5xl sm:leading-[1.08]">
-              Private messages.
-              <span className="mt-1 block bg-gradient-to-r from-white via-nm-accent-soft to-nm-ink bg-clip-text text-transparent">
-                Selective proofs.
-              </span>
+      <main id="main-content">
+        <section className="hero container">
+          <div className="hero-copy">
+            <div className="eyebrow">
+              <span className="status-dot" /> MESSAGING, WITH A DIFFERENT
+              MINDSET <span className="eyebrow-line" />
+            </div>
+            <h1>
+              Your words.
+              <br />
+              <span>Not the world’s.</span>
             </h1>
-            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-nm-muted sm:text-lg">
-              {PRODUCT.oneLiner} No phone number. No paywall. Just Lace + Midnight.
+            <p className="hero-description">
+              For the late-night ideas. The inside jokes. The conversations that
+              are just between you.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/onboarding" className="nm-btn nm-btn-primary px-6 py-3 text-base">
-                Start chatting free
+            <p className="hero-secondary">
+              A calmer messaging experience, built for the Midnight ecosystem.
+            </p>
+            <div className="hero-actions">
+              <Link href="/app" className="button button-accent">
+                Find your quiet <Icon name="arrowUp" size={19} />
               </Link>
-              <Link href="/app" className="nm-btn nm-btn-ghost px-6 py-3 text-base">
-                Preview the chat UI
+              <Link href="#experience" className="text-link">
+                Take a look around <Icon name="arrow" size={17} />
               </Link>
             </div>
-            <p className="mt-4 text-xs text-nm-muted">
-              Android app included in this repo · Web works today with mock chats
+            <div className="hero-footnote">
+              <span className="tiny-circle">
+                <Icon name="check" size={10} />
+              </span>{" "}
+              Free to explore <span>·</span> No wallet required{" "}
+              <span className="preview-pill">Public preview</span>
+            </div>
+          </div>
+          <MessengerPreview />
+          <div className="hero-bottom">
+            <span>01 — A NEW KIND OF CONVERSATION</span>
+            <span>
+              SCROLL TO EXPLORE <span>↓</span>
+            </span>
+          </div>
+        </section>
+        <section
+          className="principles container"
+          aria-label="Product principles"
+        >
+          <span>
+            Less to give up.
+            <br />
+            <strong>More to say.</strong>
+          </span>
+          <div>
+            <Icon name="chat" /> No phone number
+          </div>
+          <div>
+            <Icon name="code" /> Always open source
+          </div>
+          <div>
+            <Icon name="moon" /> Made for Midnight
+          </div>
+          <div>
+            <Icon name="sparkle" /> Yours to explore
+          </div>
+        </section>
+        <section className="experience container section-space" id="experience">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">LESS NOISE. MORE CONNECTION.</p>
+              <h2>
+                Good conversation.
+                <br />
+                <span>Room to breathe.</span>
+              </h2>
+            </div>
+            <p>
+              No feeds to keep up with. No audience to perform for.
+              <br />
+              Just a thoughtful space for one-to-one conversations.
             </p>
           </div>
-
-          <div className="nm-fade-up mx-auto mt-14 max-w-4xl">
-            <div className="nm-glass overflow-hidden rounded-2xl">
-              <div className="flex items-center gap-2 border-b border-nm-border px-4 py-3">
-                <span className="h-2.5 w-2.5 rounded-full bg-nm-danger/80" />
-                <span className="h-2.5 w-2.5 rounded-full bg-nm-accent-soft/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-nm-success" />
-                <span className="ml-3 text-xs text-nm-muted">Night Messenger · 1:1</span>
-                <span className="ml-auto font-serif text-sm text-nm-accent-soft/80" title="夜">
-                  {PRODUCT.brandMark}
+          <div className="feature-grid">
+            <article className="feature-card feature-large">
+              <div className="feature-top">
+                <span className="feature-icon">
+                  <Icon name="chat" />
                 </span>
+                <span className="tiny-label">01 / THE EXPERIENCE</span>
               </div>
-              <div className="grid md:grid-cols-[280px_1fr]">
-                <div className="border-b border-nm-border p-4 md:border-b-0 md:border-r">
-                  {["Ada", "Orion", "Nyx"].map((n, i) => (
-                    <div
-                      key={n}
-                      className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 ${i === 0 ? "bg-white/10" : ""}`}
-                    >
-                      <div
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-nm-on-accent"
-                        style={{
-                          background: `linear-gradient(145deg, hsl(0 0% ${72 - i * 12}%), hsl(0 0% ${42 - i * 8}%))`,
-                        }}
-                      >
-                        {n[0]}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{n}</p>
-                        <p className="text-[11px] text-nm-muted">
-                          {i === 0 ? "Proof of delivery ready…" : "Sealed · E2EE"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <h3>
+                Feels familiar.
+                <br />
+                Feels like yours.
+              </h3>
+              <p>
+                Pick up where you left off. Keep a draft, pin a conversation,
+                find a message, or leave a little reaction.
+              </p>
+              <div className="feature-chat-art" aria-hidden="true">
+                <div className="art-message">A place to just be ourselves.</div>
+                <div className="art-message art-mine">
+                  That’s the whole idea. <span>↗</span>
                 </div>
-                <div className="flex flex-col gap-3 p-5">
-                  <div className="max-w-[80%] rounded-2xl rounded-bl-md border border-nm-border bg-nm-panel px-3.5 py-2.5 text-sm">
-                    Committed existence on-chain; body stays E2EE.
-                  </div>
-                  <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-gradient-to-br from-nm-accent to-nm-accent-deep px-3.5 py-2.5 text-sm text-nm-on-accent">
-                    Prove delivery when you need it — not the message.
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <span className="rounded-full border border-nm-border px-2 py-0.5 text-[10px] uppercase text-nm-accent-soft">E2EE</span>
-                    <span className="rounded-full border border-nm-border px-2 py-0.5 text-[10px] uppercase text-nm-accent-soft">Committed</span>
-                    <span className="rounded-full border border-nm-border px-2 py-0.5 text-[10px] uppercase text-nm-accent-soft">Selective</span>
-                  </div>
-                </div>
+                <span className="art-reaction">♡ &nbsp; 1</span>
               </div>
-            </div>
+              <Link href="/app" className="text-link">
+                Explore the messenger <Icon name="arrow" size={16} />
+              </Link>
+            </article>
+            <article className="feature-card">
+              <div className="feature-top">
+                <span className="feature-icon">
+                  <Icon name="eye" />
+                </span>
+                <span className="feature-tag">THE VISION</span>
+              </div>
+              <div className="privacy-art" aria-hidden="true">
+                <div className="privacy-ring">
+                  <Icon name="eye" size={28} />
+                </div>
+                <span>YOU DECIDE WHAT TO SHARE</span>
+              </div>
+              <h3>Privacy, on your terms.</h3>
+              <p>
+                A vision for selective disclosure: prove a fact without opening
+                the whole conversation.
+              </p>
+              <Link href="/security" className="text-link">
+                Meet the privacy model <Icon name="arrow" size={16} />
+              </Link>
+            </article>
+            <article className="feature-card">
+              <div className="feature-top">
+                <span className="feature-icon">
+                  <Icon name="code" />
+                </span>
+                <span className="tiny-label">BUILT IN THE OPEN</span>
+              </div>
+              <div className="open-art" aria-hidden="true">
+                <span>
+                  <Icon name="moon" size={22} />
+                </span>
+                <span className="code-bracket">{"{ }"}</span>
+                <span>☾</span>
+              </div>
+              <h3>No black boxes.</h3>
+              <p>
+                Free to use. Open to inspect. Follow the work, shape what comes
+                next, or make it your own.
+              </p>
+              <a
+                href="https://github.com/Kshot3000/Night-Messenger-"
+                target="_blank"
+                rel="noreferrer"
+                className="text-link"
+              >
+                Go behind the scenes <Icon name="arrowUp" size={16} />
+              </a>
+            </article>
           </div>
         </section>
-
-        <section className="border-y border-nm-border bg-nm-elevated/40 py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-              Three layers. You stay in control.
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-nm-muted sm:text-base">
-              Midnight ZK + selective disclosure — high level, no fake crypto APIs.
-            </p>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {PRIVACY_LEGEND.map((item) => (
-                <article key={item.layer} className="nm-card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-nm-accent-soft">
-                    {item.layer.replace("_", "-")}
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-nm-muted">{item.summary}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Who it is for</h2>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {AUDIENCE.map((a) => (
-                <article key={a.title} className="rounded-2xl border border-nm-border bg-black/20 p-5">
-                  <h3 className="font-semibold">{a.title}</h3>
-                  <p className="mt-2 text-sm text-nm-muted">{a.body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-nm-border bg-nm-elevated/30 py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Why Night Messenger — not just Signal or Telegram
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm text-nm-muted">
-              Great E2EE apps already exist. We add Midnight-native identity and selective proofs.
-            </p>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {WHY_NOT_SIGNAL.map((w) => (
-                <article key={w.title} className="nm-card p-5">
-                  <h3 className="font-semibold">{w.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-nm-muted">{w.body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="nm-card flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+        <section className="how-section section-space" id="how-it-works">
+          <div className="container">
+            <div className="section-heading">
               <div>
-                <h2 className="text-xl font-semibold">Trust by default</h2>
-                <p className="mt-2 max-w-xl text-sm text-nm-muted">
-                  Open source. No dark patterns. No paywalls. Contract stubs are labeled honestly in the UI.
-                </p>
+                <p className="eyebrow">MAKE YOURSELF AT HOME</p>
+                <h2>
+                  A few clicks.
+                  <br />
+                  <span>A little more you.</span>
+                </h2>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/security" className="nm-btn nm-btn-ghost">Trust &amp; security</Link>
-                <a href={PRODUCT.repoUrl} target="_blank" rel="noreferrer" className="nm-btn nm-btn-primary">View on GitHub</a>
-              </div>
+              <Link href="/onboarding" className="button button-outline">
+                Set up your space <Icon name="arrow" size={17} />
+              </Link>
             </div>
-            <div className="mt-10">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-nm-muted">Roadmap</h3>
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                {ROADMAP.map((r) => (
-                  <li key={r} className="flex gap-2 text-sm text-nm-text">
-                    <span className="text-nm-accent-soft">→</span> {r}
-                  </li>
-                ))}
-              </ul>
+            <div className="steps-grid">
+              {[
+                {
+                  title: "Come as you are.",
+                  body: "Choose a display name. There’s no phone number or email form standing in your way.",
+                  icon: "moon" as const,
+                },
+                {
+                  title: "Find your people.",
+                  body: "Explore sample chats or create a new local conversation. Pin your favorites and settle in.",
+                  icon: "chat" as const,
+                },
+                {
+                  title: "Make it a conversation.",
+                  body: "Write, react, search, and pick up where you left off. Your demo stays on this device.",
+                  icon: "sparkle" as const,
+                },
+              ].map((step, i) => (
+                <article key={step.title}>
+                  <div className="step-number">
+                    0{i + 1}
+                    <Icon name={step.icon} size={23} />
+                  </div>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </article>
+              ))}
+            </div>
+            <div className="honesty-note">
+              <Icon name="info" size={18} />
+              <p>
+                <strong>A preview with a purpose.</strong> This is a working
+                local demo. Encrypted delivery and live Midnight proofs are
+                still ahead.
+              </p>
+              <Link href="/security">
+                See what’s ready <Icon name="arrowUp" size={14} />
+              </Link>
             </div>
           </div>
+        </section>
+        <section className="faq-section container section-space">
+          <div>
+            <p className="eyebrow">A LITTLE CLARITY</p>
+            <h2>
+              Good questions.
+              <br />
+              <span>Straight answers.</span>
+            </h2>
+            <p>Trust starts with knowing where things stand.</p>
+          </div>
+          <div className="faq-list">
+            {faqs.map(([q, a]) => (
+              <details key={q}>
+                <summary>
+                  {q}
+                  <Icon name="plus" size={18} />
+                </summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+        <section className="closing-section container">
+          <div className="closing-moon" aria-hidden="true" />
+          <p className="eyebrow">THE INTERNET CAN BE A QUIETER PLACE.</p>
+          <h2>
+            Let’s keep it
+            <br />
+            <span>between us.</span>
+          </h2>
+          <Link href="/app" className="button button-accent">
+            Step inside <Icon name="arrowUp" size={18} />
+          </Link>
+          <p className="closing-caption">
+            Your next good conversation starts here.
+            <br />
+            <span>Explore the local preview · Free & open source</span>
+          </p>
         </section>
       </main>
-
-      <footer className="border-t border-nm-border py-8 text-center text-xs text-nm-muted">
-        <p>
-          <span className="mr-1.5 font-serif text-nm-accent-soft">{PRODUCT.brandMark}</span>
-          {PRODUCT.name} · Free forever ·{" "}
-          <a className="text-nm-accent-soft hover:underline" href={PRODUCT.repoUrl}>
-            Kshot3000/Night-Messenger-
-          </a>
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
