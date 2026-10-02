@@ -53,7 +53,7 @@ The export is written to `apps/web/out/`. Serve it over HTTP, not by opening HTM
 
 ## GitHub Pages
 
-The current website publishes from the **gh-pages branch, root folder**. The `Web checks` GitHub Actions workflow validates every main-branch push and pull request. To publish after the checks pass:
+The current website publishes from the **gh-pages branch, root folder**. Before publishing, the web checks must pass locally: `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build:web` (Node 24, pnpm 11.25.0, frozen lockfile). To publish after the checks pass:
 
 ```bash
 bash scripts/deploy-gh-pages.sh

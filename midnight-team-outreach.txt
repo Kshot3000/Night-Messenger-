@@ -8,7 +8,7 @@ Products & sites
 - Nocturne (private message/email): https://github.com/Kshot3000/nocturne
 - Cardano + Midnight Qwen Builder: https://github.com/Kshot3000/Cardano-Midnight-Qwen-Builder
 - Midnight GrokBot Agent: https://github.com/Kshot3000/Midnight-GrokBot-Agent
-- NightDream: https://github.com/Kshot3000/nightdream.xyz · http://nightdream.xyz/
+- NightDream: https://github.com/Kshot3000/nightdream.xyz · https://nightdream.xyz/
 
 Open PRs (wallet discovery / docs / tools)
 - https://github.com/midnightntwrk/midnight-docs/pull/1406

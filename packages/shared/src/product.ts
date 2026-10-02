@@ -6,7 +6,7 @@ export const PRODUCT = {
   legalName: 'Night Messenger',
   tagline: 'Private messaging on Midnight — with selective disclosure',
   oneLiner:
-    '1:1 DMs where plaintext stays encrypted, existence can be proven on-chain, and you choose what to disclose.',
+    '1:1 DMs designed for Midnight selective disclosure. Today this is a local preview — end-to-end encryption, on-chain commitments, and proofs are on the roadmap, not yet live.',
   repoUrl: 'https://github.com/Kshot3000/Night-Messenger-',
   twitter: '@kshot9000',
   freeAndOpen: true as const,
@@ -50,7 +50,7 @@ export const WHY_NOT_SIGNAL = [
   },
   {
     title: 'Selective disclosure by design',
-    body: 'Prove “I sent this” or “they received it” to a counterparty, auditor, or contract — plaintext never leaves the E2EE envelope.',
+    body: 'The goal: prove “I sent this” or “they received it” to a counterparty, auditor, or contract — without opening the conversation. Proof generation is not implemented yet.',
   },
   {
     title: 'Free, open source & wallet-native',
