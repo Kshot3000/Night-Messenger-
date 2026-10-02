@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "./Brand";
+import { DonationCard } from "./DonationCard";
 import { Icon } from "./Icon";
 export function SiteFooter() {
   return (
@@ -7,6 +8,7 @@ export function SiteFooter() {
       <div>
         <Brand />
         <p>A quieter corner of the internet.</p>
+        <DonationCard />
       </div>
       <div className="footer-links">
         <Link href="/security">Privacy & transparency</Link>
