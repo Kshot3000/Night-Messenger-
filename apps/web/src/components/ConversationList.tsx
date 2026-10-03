@@ -3,15 +3,7 @@ import type { LocalConversation } from "@/lib/messenger-store";
 import { lastActivity } from "@/lib/messenger-store";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
-function relative(at: string) {
-  const date = new Date(at);
-  const days = Math.floor((Date.now() - date.getTime()) / 86400000);
-  return days > 0
-    ? days === 1
-      ? "Yesterday"
-      : date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
-    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
+import { formatListTimestamp } from "@/lib/format";
 export function ConversationList({
   conversations,
   activeId,
@@ -138,7 +130,7 @@ export function ConversationList({
                     <span className="conversation-topline">
                       <strong>{c.name}</strong>
                       <time dateTime={lastActivity(c)}>
-                        {relative(lastActivity(c))}
+                        {formatListTimestamp(lastActivity(c))}
                       </time>
                     </span>
                     <span className="conversation-bottomline">

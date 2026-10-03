@@ -8,6 +8,7 @@ import {
   sortConversations,
   matchesSearch,
   MAX_BODY_LENGTH,
+  MAX_ADDRESS_LENGTH,
 } from "../src/lib/messenger-store.ts";
 const now = "2026-10-01T13:00:00.000Z";
 const seed = () => createDemoWorkspace(Date.parse(now));
@@ -150,6 +151,18 @@ test("malformed or incompatible backups are rejected without changing existing d
     (s) => (s.conversations[0].draft = "x".repeat(MAX_BODY_LENGTH + 1)),
     (s) => (s.conversations[0].messages[0].editedAt = "invalid"),
     (s) => (s.conversations[0].messages[0].author = "stranger"),
+    // The send/edit path can never produce a blank body, so a backup
+    // containing one is not a workspace this app wrote.
+    (s) => (s.conversations[0].messages[0].body = ""),
+    (s) => (s.conversations[0].messages[0].body = "   "),
+    // newConversation caps addresses; the import path must cap them too.
+    (s) => (s.conversations[0].address = "x".repeat(MAX_ADDRESS_LENGTH + 1)),
+    // Messages must stay chronological: the list preview, lastActivity
+    // and sorting all trust the last message to be the latest.
+    (s) => {
+      const messages = s.conversations[0].messages;
+      [messages[0], messages[1]] = [messages[1], messages[0]];
+    },
   ];
   for (const change of mutations) {
     const state = seed();
@@ -160,4 +173,15 @@ test("malformed or incompatible backups are rejected without changing existing d
     version: 1,
     conversations: [],
   });
+});
+test("validator accepts boundary-valid workspaces", () => {
+  const state = seed();
+  state.conversations[0].address = "x".repeat(MAX_ADDRESS_LENGTH);
+  state.conversations[0].messages[0].body = "x".repeat(MAX_BODY_LENGTH);
+  assert.ok(parseWorkspace(JSON.stringify(state)));
+  // Equal timestamps are valid: two messages can share a millisecond.
+  const equal = seed();
+  equal.conversations[0].messages[1].at =
+    equal.conversations[0].messages[0].at;
+  assert.ok(parseWorkspace(JSON.stringify(equal)));
 });

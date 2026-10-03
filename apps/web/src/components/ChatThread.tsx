@@ -6,6 +6,7 @@ import { Icon } from "./Icon";
 import { ComposeBox } from "./ComposeBox";
 import { Modal } from "./Modal";
 import { MAX_BODY_LENGTH } from "@/lib/messenger-store";
+import { formatMessageTime } from "@/lib/format";
 export function ChatThread({
   conversation: c,
   onBack,
@@ -169,12 +170,7 @@ export function ChatThread({
                   <div className="message-group">
                     <div className="message-bubble">{m.body}</div>
                     <div className="message-meta">
-                      <time dateTime={m.at}>
-                        {new Date(m.at).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </time>
+                      <time dateTime={m.at}>{formatMessageTime(m.at)}</time>
                       {m.editedAt && (
                         <span
                           title={`Edited ${new Date(m.editedAt).toLocaleString()}`}

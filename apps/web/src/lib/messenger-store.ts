@@ -1,6 +1,7 @@
 /** Local preview state. This stores readable demo content, never real encrypted messages. */
 export const WORKSPACE_KEY = "night_messenger_workspace_v1";
 export const MAX_BODY_LENGTH = 4000;
+export const MAX_ADDRESS_LENGTH = 256;
 export type Message = {
   id: string;
   author: "me" | "peer";
@@ -225,11 +226,14 @@ export function parseWorkspace(raw: string): Workspace | null {
         !validDate(c.createdAt) ||
         !Array.isArray(c.messages) ||
         c.messages.length > 10000 ||
-        (c.address !== undefined && typeof c.address !== "string")
+        (c.address !== undefined &&
+          (typeof c.address !== "string" ||
+            c.address.length > MAX_ADDRESS_LENGTH))
       )
         return null;
       ids.add(c.id);
       const messageIds = new Set<string>();
+      let previousAt = -Infinity;
       for (const m of c.messages) {
         if (
           !m ||
@@ -239,6 +243,7 @@ export function parseWorkspace(raw: string): Workspace | null {
           messageIds.has(m.id) ||
           !["me", "peer"].includes(m.author) ||
           typeof m.body !== "string" ||
+          !m.body.trim() ||
           m.body.length > MAX_BODY_LENGTH ||
           !validDate(m.at) ||
           (m.editedAt !== undefined && !validDate(m.editedAt)) ||
@@ -246,6 +251,13 @@ export function parseWorkspace(raw: string): Workspace | null {
             (typeof m.reaction !== "string" || m.reaction.length > 16))
         )
           return null;
+        // The UI treats the last message as the latest (list preview,
+        // lastActivity, sorting), so a backup whose messages are out of
+        // chronological order would silently misrender. The app only
+        // ever appends, so valid workspaces are always non-decreasing.
+        const atMs = Date.parse(m.at);
+        if (atMs < previousAt) return null;
+        previousAt = atMs;
         messageIds.add(m.id);
       }
     }
@@ -281,7 +293,7 @@ export function newConversation(name: string, address = ""): LocalConversation {
   return {
     id: crypto.randomUUID(),
     name: name.trim().slice(0, 40),
-    address: address.trim().slice(0, 256) || undefined,
+    address: address.trim().slice(0, MAX_ADDRESS_LENGTH) || undefined,
     hue:
       Array.from(name).reduce((sum, letter) => sum + letter.charCodeAt(0), 0) %
       360,
