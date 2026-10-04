@@ -1,0 +1,51 @@
+name: Web checks
+
+# Validates every push to main and every pull request, as documented in
+# README.md ("The `Web checks` GitHub Actions workflow validates every
+# main-branch push and pull request") and docs/RELEASE-NOTES.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-checks:
+    name: Test, typecheck, lint, and build the web export
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Run regression tests
+        run: pnpm test
+
+      - name: Typecheck shared and web packages
+        run: pnpm typecheck
+
+      - name: Lint the web source
+        run: pnpm lint
+
+      - name: Build the static web export
+        run: pnpm build:web
