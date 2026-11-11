@@ -112,6 +112,22 @@ test("non-members cannot post or ack; replays of a commitment are refused", () =
   assert.throws(() => call(s, alice, "ackDelivery", b32()), /unknown message/);
 });
 
+test("no self-receipts: the author cannot ackDelivery their own message (Joe #1)", () => {
+  let s = world();
+  const c = b32();
+  s = call(s, { ...alice, blind: b32() }, "postEnvelope", INBOX, c);
+  // the sender's nullifier is burned at post time, but not counted as a delivery
+  assert.ok(L(s).acks.member(P.ackNullifier(c, alice.sk)));
+  assert.equal(L(s).ackCount.member(c), false);
+  assert.equal(L(s).deliveryCount, 0n);
+  assert.throws(() => call(s, alice, "ackDelivery", c), /already acknowledged/);
+  // a different member still can, exactly once
+  s = call(s, bob, "ackDelivery", c);
+  assert.equal(L(s).ackCount.lookup(c), 1n);
+  assert.equal(L(s).deliveryCount, 1n);
+  assert.throws(() => call(s, bob, "ackDelivery", c), /already acknowledged/);
+});
+
 test("membership is bound to the inbox: a member of inbox A cannot post into inbox B", () => {
   let s = world();
   const OTHER = b32();

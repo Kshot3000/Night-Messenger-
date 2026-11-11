@@ -35,6 +35,8 @@
  * Delivery receipts. ackDelivery proves membership of the post's inbox and
  * records ackNullifier = persistentHash("nm:ack:v1" || commitment || sk), so a
  * member can acknowledge a message once, without saying who they are.
+ * postEnvelope inserts the sender's own nullifier up front, so a receipt
+ * always comes from a member other than the author (no self-receipts).
  *
  * Status: compiles with compactc 0.31.1. Not audited. Testnet only.
  */
@@ -192,6 +194,11 @@ export circuit postEnvelope(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
   const tag = disclose(authorTag(c, m, authorBlind(c)));
   posts.insert(c, PostRecord { inboxId: id, authorTag: tag, seq: postCount.read() });
   postCount.increment(1);
+  // Burn the sender's own ack nullifier so the author cannot "deliver" their
+  // own message: a later self-ack fails with "already acknowledged". The
+  // nullifier is a fresh pseudorandom value per (message, sk); it does not
+  // identify the sender and is not counted in ackCount / deliveryCount.
+  acks.insert(disclose(ackNullifier(c, localSecretKey())));
 }
 
 /* A member of the post's inbox acknowledges it once, anonymously. */
