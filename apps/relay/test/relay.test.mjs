@@ -51,8 +51,11 @@ test("rejects bad mailboxes, non-envelopes, duplicates, wrong content type and o
   assert.equal((await fetch(`${base}/v1/mailboxes/${box}/messages?after=-1`)).status, 400);
 });
 
-test("CORS preflight is answered", async () => {
-  const r = await fetch(`${base}/v1/mailboxes/${box}/messages`, { method: "OPTIONS", headers: { origin: "http://localhost:3000" } });
-  assert.equal(r.status, 204);
-  assert.equal(r.headers.get("access-control-allow-origin"), "*");
+test("CORS: explicit allowlist by default, never *; unknown origins get no allow header", async () => {
+  const pre = (origin) => fetch(`${base}/v1/mailboxes/${box}/messages`, { method: "OPTIONS", headers: { origin } });
+  const ok = await pre("http://localhost:3000");
+  assert.equal(ok.status, 204);
+  assert.equal(ok.headers.get("access-control-allow-origin"), "http://localhost:3000");
+  assert.equal((await pre("https://kshot3000.github.io")).headers.get("access-control-allow-origin"), "https://kshot3000.github.io");
+  assert.equal((await pre("https://evil.example")).headers.get("access-control-allow-origin"), null);
 });

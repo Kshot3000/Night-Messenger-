@@ -40,6 +40,21 @@ export function addMessage(state: PrivateState, mailbox: string, m: ChatMessage)
   const next = [...list, m].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   return { ...state, threads: { ...state.threads, [mailbox]: next } };
 }
+/**
+ * The chain simulator receives the member secret (sk) in plain JSON, so it
+ * must only ever run on this machine. "local" = localhost/127.0.0.1/[::1];
+ * anything else is "warn" in development and "refuse" in production builds.
+ */
+export function chainUrlRisk(u: string, production: boolean): "local" | "warn" | "refuse" {
+  let local = false;
+  try {
+    local = ["localhost", "127.0.0.1", "[::1]"].includes(new URL(u).hostname);
+  } catch {
+    local = false;
+  }
+  return local ? "local" : production ? "refuse" : "warn";
+}
+
 export function isRelayUrl(u: string): boolean {
   try {
     const url = new URL(u);

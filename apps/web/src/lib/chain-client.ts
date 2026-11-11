@@ -5,9 +5,14 @@
  * a proof server, real ZK proofs. Preprod (Lace + proof server + indexer) is
  * the next step and plugs in behind the same three calls.
  */
+import { chainUrlRisk } from "./private-store";
+
 export const DEFAULT_CHAIN =
   process.env.NEXT_PUBLIC_NM_CHAIN_URL || "http://localhost:8788";
 export const CHAIN_KEY = "nm_private_chain_v1";
+const PRODUCTION = process.env.NODE_ENV === "production";
+/** See chainUrlRisk: the simulator gets sk in plain JSON, so never send it anywhere but localhost in a production build. */
+export const chainRisk = (base: string) => chainUrlRisk(base, PRODUCTION);
 
 export type TxInfo = { n: number; circuit: string; at: string; proof: { bytes: number; ms: number } | null };
 export type Receipt = {
@@ -22,6 +27,8 @@ export type Receipt = {
 };
 
 async function call<T>(base: string, path: string, body?: unknown): Promise<T> {
+  if (body !== undefined && chainRisk(base) === "refuse")
+    throw new Error(`refusing to send your member secret to a non-local chain simulator (${base}); run it on localhost`);
   const r = await fetch(`${base.replace(/\/$/, "")}${path}`, body === undefined ? undefined : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j?.error || `chain returned ${r.status}`);

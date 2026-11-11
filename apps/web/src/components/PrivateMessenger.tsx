@@ -24,7 +24,7 @@ import { Brand } from "./Brand";
 import { Icon } from "./Icon";
 import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
-import { CHAIN_KEY, DEFAULT_CHAIN, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
+import { CHAIN_KEY, DEFAULT_CHAIN, chainRisk, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
 
 type Boot = "loading" | "unsupported" | "setup" | "ready";
 const POLL_MS = 3000;
@@ -276,6 +276,12 @@ export function PrivateMessenger() {
           <span className={`pm-dot ${chainInfo?.ok ? "ok" : "off"}`} /> chain {chainInfo?.ok ? (chainInfo.proving ? "sim + real ZK proofs" : "sim, no proofs") : "offline"}
         </div>
       </header>
+      {chainRisk(chain) !== "local" && (
+        <p className="pm-notice pm-danger" role="alert">
+          WARNING: the chain URL {chain} is not localhost. The chain simulator receives your member secret in plain JSON and must never be hosted.
+          {chainRisk(chain) === "refuse" ? " This production build refuses to send it there." : " Development build: requests are still sent. Do not use this with real identities."}
+        </p>
+      )}
       {notice && (
         <p className="pm-notice" role="status">
           {notice} <button className="pm-link" onClick={() => setNotice("")}>Dismiss</button>

@@ -4501,6 +4501,7 @@ textarea {
 .pm-dot.ok { background: var(--nm-success); }
 .pm-dot.off { background: var(--danger); }
 .pm-notice { margin: 8px 16px 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.pm-notice.pm-danger { border-color: #e5484d; background: rgba(229, 72, 77, 0.12); color: inherit; font-weight: 600; }
 .pm-layout { flex: 1; display: grid; grid-template-columns: 320px 1fr; min-height: 0; }
 .pm-side { border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; }
 .pm-me { padding-bottom: 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }

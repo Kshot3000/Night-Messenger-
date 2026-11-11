@@ -24,7 +24,8 @@
  *   POST /v1/chain/ack    {sk, commitment}
  *   POST /v1/chain/reveal {sk, blind, commitment}
  *
- * Env: PORT (8788), HOST (127.0.0.1), NM_PROOF_SERVER, NM_SIM_ORIGINS (*)
+ * Env: PORT (8788), HOST (127.0.0.1), NM_PROOF_SERVER, NM_SIM_ORIGINS (allowlist, default localhost:3000).
+ * NEVER host this simulator: it receives member secrets (sk) in plain JSON.
  */
 import http from "node:http";
 import path from "node:path";
@@ -43,7 +44,7 @@ export function usage(l) {
   return { inboxes: String(l.inboxCount), registrations: String(l.membersAdded), envelopesPosted: String(l.postCount), deliveryReceipts: String(l.deliveryCount) };
 }
 
-export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
+export async function createChainSim({ proofServer = "", origins = "http://localhost:3000,http://127.0.0.1:3000" } = {}) {
   const { Contract, ledger, pureCircuits: P } = await import(pathToFileURL(path.join(OUT, "contract", "index.js")).href);
   const witnesses = {
     localSecretKey: ({ privateState }) => [privateState, privateState.sk],
@@ -199,7 +200,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { server } = await createChainSim({ proofServer: process.env.NM_PROOF_SERVER ?? "", origins: process.env.NM_SIM_ORIGINS ?? "*" });
+  const { server } = await createChainSim({ proofServer: process.env.NM_PROOF_SERVER ?? "", origins: process.env.NM_SIM_ORIGINS || "http://localhost:3000,http://127.0.0.1:3000" });
   const port = Number(process.env.PORT ?? 8788);
   const host = process.env.HOST ?? "127.0.0.1";
   server.listen(port, host, () => console.log(`night-messenger chain simulator on http://${host}:${port} (${process.env.NM_PROOF_SERVER ? "proving via " + process.env.NM_PROOF_SERVER : "no proofs"})`));

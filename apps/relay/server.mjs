@@ -18,7 +18,8 @@
  * sender posts on-chain with night_messenger.compact postEnvelope. Anyone can
  * recompute it, so the relay cannot swap a ciphertext without detection.
  *
- * Env: PORT (8787), HOST (127.0.0.1), NM_RELAY_ORIGINS (comma list or *),
+ * Env: PORT (8787), HOST (127.0.0.1), NM_RELAY_ORIGINS (comma-separated
+ * allowlist; default DEFAULT_ORIGINS below; "*" only if you really mean it),
  * NM_RELAY_DATA (optional JSON file for persistence), NM_RELAY_TTL_HOURS (168).
  */
 import http from "node:http";
@@ -38,7 +39,10 @@ export const LIMITS = {
 const MAILBOX = /^[0-9a-f]{64}$/;
 const B64U = /^[A-Za-z0-9_-]+$/;
 
-export function createRelay({ origins = "*", dataFile = "", ttlHours = 168, now = () => Date.now() } = {}) {
+/** Browser origins allowed by default: the local dev server and the GitHub Pages build. */
+export const DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://kshot3000.github.io";
+
+export function createRelay({ origins = DEFAULT_ORIGINS, dataFile = "", ttlHours = 168, now = () => Date.now() } = {}) {
   /** @type {Map<string, {seq:number, envelope:string, commitment:string, receivedAt:string}[]>} */
   const boxes = new Map();
   let seq = 0;
@@ -179,7 +183,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const port = Number(process.env.PORT ?? 8787);
   const host = process.env.HOST ?? "127.0.0.1";
   const server = createRelay({
-    origins: process.env.NM_RELAY_ORIGINS ?? "*",
+    origins: process.env.NM_RELAY_ORIGINS || DEFAULT_ORIGINS,
     dataFile: process.env.NM_RELAY_DATA ?? "",
     ttlHours: Number(process.env.NM_RELAY_TTL_HOURS ?? 168),
   });
