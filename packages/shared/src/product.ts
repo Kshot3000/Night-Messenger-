@@ -4,13 +4,16 @@ export const PRODUCT = {
   name: 'Night Messenger',
   shortName: 'Night Chat',
   legalName: 'Night Messenger',
-  tagline: 'Private messaging on Midnight — with selective disclosure',
+  tagline: 'Verified but anonymous messaging on Midnight',
   oneLiner:
-    '1:1 DMs designed for Midnight selective disclosure. Today this is a local preview — end-to-end encryption, on-chain commitments, and proofs are on the roadmap, not yet live.',
+    'End-to-end encrypted DMs where the sender proves they are a registered member without revealing who, and delivery receipts anyone can check on Midnight.',
   repoUrl: 'https://github.com/Kshot3000/Night-Messenger-',
   twitter: '@kshot9000',
   freeAndOpen: true as const,
   brandMark: '夜',
+  /** Cardano address for optional tips ("Support the dev"). Unlocks nothing. */
+  tipAddress:
+    'addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v',
   theme: {
     bg: '#050505',
     bgElevated: '#0a0a0a',

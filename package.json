@@ -17,7 +17,8 @@
     "relay": "node apps/relay/server.mjs",
     "test:contracts": "pnpm --filter @midnight-messenger/contracts test",
     "compile:contracts": "pnpm --filter @midnight-messenger/contracts compile",
-    "demo:e2e": "pnpm --filter @midnight-messenger/contracts demo"
+    "demo:e2e": "pnpm --filter @midnight-messenger/contracts demo",
+    "chain-sim": "pnpm --filter @midnight-messenger/contracts sim"
   },
   "engines": {
     "node": ">=22.18"

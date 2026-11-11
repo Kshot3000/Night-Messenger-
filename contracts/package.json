@@ -11,7 +11,8 @@
     "compile:fast": "compact compile +0.31.1 --skip-zk src/night_messenger.compact src/managed/night_messenger",
     "test": "pnpm run compile:fast && node --experimental-strip-types --no-warnings --test test/*.test.mjs",
     "prove:local": "node --experimental-strip-types --no-warnings scripts/prove-local.mjs",
-    "demo": "pnpm run compile:fast && node --experimental-strip-types --no-warnings scripts/e2e-demo.mjs"
+    "demo": "pnpm run compile:fast && node --experimental-strip-types --no-warnings scripts/e2e-demo.mjs",
+    "sim": "node --no-warnings sim/server.mjs"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0"
