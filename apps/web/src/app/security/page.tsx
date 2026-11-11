@@ -33,11 +33,13 @@ export default function SecurityPage() {
         <div className="security-callout">
           <Icon name="info" size={24} />
           <div>
-            <strong>You’re exploring a local preview.</strong>
+            <strong>Two modes, stated plainly.</strong>
             <p>
-              Messages are readable data saved in your browser. They are not
-              encrypted, sent to other people, or committed to a blockchain.
-              Please use sample content, not sensitive information.
+              Private chat (/private) encrypts end to end and delivers through
+              a ciphertext-only relay; commitments and receipts go to a local
+              chain simulator that runs the real contract, until the Midnight
+              Preprod deployment lands. The sample app (/app) is a local
+              preview with readable demo data. Testnet only, not audited.
             </p>
           </div>
         </div>
@@ -95,17 +97,17 @@ export default function SecurityPage() {
               {
                 icon: "lock" as const,
                 title: "Private content",
-                body: "The goal: encrypt messages so only the intended participants can read them. This is not yet implemented.",
+                body: "Working in Private chat: X25519 + HKDF + AES-256-GCM in the browser (WebCrypto). Keys are made on your device and sealed at rest with a non-extractable device key. Not audited.",
               },
               {
                 icon: "shield" as const,
                 title: "Optional commitments",
-                body: "The goal: record a commitment on Midnight without placing message text on-chain. Contract interfaces are still prototypes.",
+                body: "Working: each message posts only a 32-byte SHA-256 commitment of its ciphertext, with a ZK proof that a member sent it. Runs on a local chain simulator with real proofs; Preprod next.",
               },
               {
                 icon: "eye" as const,
                 title: "Selective disclosure",
-                body: "The goal: choose a fact to prove without revealing the conversation around it. No live proof generation is available yet.",
+                body: "Working: anonymous delivery receipts anyone can count at /verify, and an opt-in bundle that proves who wrote one message without opening any other.",
               },
             ].map((item) => (
               <article key={item.title}>

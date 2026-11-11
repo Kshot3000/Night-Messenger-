@@ -15,7 +15,7 @@
  *   GET  /v1/mailboxes/:mailbox/messages?after=<seq>  -> {messages:[{seq, envelope, commitment, receivedAt}], next}
  *
  * The commitment returned is SHA-256(envelope bytes): the same 32 bytes the
- * sender posts on-chain with night_messenger.compact postMessage. Anyone can
+ * sender posts on-chain with night_messenger.compact postEnvelope. Anyone can
  * recompute it, so the relay cannot swap a ciphertext without detection.
  *
  * Env: PORT (8787), HOST (127.0.0.1), NM_RELAY_ORIGINS (comma list or *),

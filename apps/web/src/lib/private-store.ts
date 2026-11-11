@@ -11,8 +11,8 @@ export type ChatMessage = {
   dir: "in" | "out";
   body: string;
   at: string;
-  commitment: string; // hex SHA-256 of the envelope (what postMessage puts on-chain)
-  authorTag: string; // hex hiding tag (what postMessage stores)
+  commitment: string; // hex SHA-256 of the envelope (what postEnvelope puts on-chain)
+  authorTag: string; // hex hiding tag (what postEnvelope stores)
   senderVerified: boolean; // sender's static key matched the contact's invite
   member: string; // hex sender member commitment
   blind: string; // hex; only inside your own encrypted history

@@ -18,7 +18,7 @@
  * circuit argument; only the leaf is disclosed, and the leaf is computed in the
  * circuit, so it is always bound to this inbox.
  *
- * Posting (sender privacy). postMessage proves "I hold the sk behind some leaf
+ * Posting (sender privacy). postEnvelope proves "I hold the sk behind some leaf
  * of this inbox" with a Merkle path against a current or recent root. The
  * ledger learns that *a* member posted, not which one: the anonymity set is
  * the inbox's live members.
@@ -32,7 +32,7 @@
  * secret. Either party can later hand (m, blind) to a third party to prove
  * authorship of one message, or the sender can publish it with revealAuthor.
  *
- * Delivery receipts. ackMessage proves membership of the post's inbox and
+ * Delivery receipts. ackDelivery proves membership of the post's inbox and
  * records ackNullifier = persistentHash("nm:ack:v1" || commitment || sk), so a
  * member can acknowledge a message once, without saying who they are.
  *
@@ -71,6 +71,11 @@ export ledger acks: Set<Bytes<32>>;
 export ledger ackCount: Map<Bytes<32>, Uint<32>>;
 
 export ledger revealedAuthors: Map<Bytes<32>, Bytes<32>>;
+
+/* Aggregate usage counters (read-only traction numbers; reveal no identities). */
+export ledger inboxCount: Counter;
+export ledger membersAdded: Counter;
+export ledger deliveryCount: Counter;
 
 /* ---------- private witnesses ---------- */
 
@@ -130,6 +135,7 @@ export circuit createInbox(inboxId: Bytes<32>): [] {
     members: 0,
     active: true
   });
+  inboxCount.increment(1);
 }
 
 /* The member commitment stays private: only the in-circuit leaf is disclosed. */
@@ -145,6 +151,7 @@ export circuit addMember(inboxId: Bytes<32>, member: Bytes<32>): [] {
   memberSlots.increment(1);
   memberIndex.insert(leaf, idx);
   memberInbox.insert(leaf, id);
+  membersAdded.increment(1);
   inboxes.insert(id, InboxRecord { owner: box.owner, members: (box.members + 1) as Uint<32>, active: box.active });
 }
 
@@ -174,7 +181,7 @@ export circuit closeInbox(inboxId: Bytes<32>): [] {
  * Merkle root, the hiding author tag. Private: sk, member commitment, path,
  * blind.
  */
-export circuit postMessage(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
+export circuit postEnvelope(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
   const id = disclose(inboxId);
   const c = disclose(commitment);
   assert(inboxes.member(id), "unknown inbox");
@@ -188,7 +195,7 @@ export circuit postMessage(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
 }
 
 /* A member of the post's inbox acknowledges it once, anonymously. */
-export circuit ackMessage(commitment: Bytes<32>): [] {
+export circuit ackDelivery(commitment: Bytes<32>): [] {
   const c = disclose(commitment);
   assert(posts.member(c), "unknown message");
   const p = posts.lookup(c);
@@ -198,6 +205,7 @@ export circuit ackMessage(commitment: Bytes<32>): [] {
   acks.insert(nf);
   const n = ((ackCount.member(c) ? ackCount.lookup(c) : 0 as Uint<32>) + 1) as Uint<32>;
   ackCount.insert(c, n);
+  deliveryCount.increment(1);
 }
 
 /* Opt-in: the author publicly discloses their member commitment for one message. */

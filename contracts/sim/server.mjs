@@ -20,7 +20,7 @@
  *   GET  /v1/chain/summary
  *   GET  /v1/chain/posts/:commitment      public receipt view (no secrets)
  *   POST /v1/chain/send   {sk, blind, inboxId, commitment, members:[hex,hex]}
- *        creates the inbox + adds members if needed (caller becomes owner), then postMessage
+ *        creates the inbox + adds members if needed (caller becomes owner), then postEnvelope
  *   POST /v1/chain/ack    {sk, commitment}
  *   POST /v1/chain/reveal {sk, blind, commitment}
  *
@@ -37,6 +37,11 @@ const OUT = process.env.NM_OUT ?? path.join(HERE, "..", "src", "managed", "night
 const HEX32 = /^[0-9a-f]{64}$/;
 const u8 = (h) => new Uint8Array(Buffer.from(h, "hex"));
 const hex = (b) => Buffer.from(b).toString("hex");
+
+/** Aggregate usage from ledger counters only: no per-user data, nothing that narrows a sender. */
+export function usage(l) {
+  return { inboxes: String(l.inboxCount), registrations: String(l.membersAdded), envelopesPosted: String(l.postCount), deliveryReceipts: String(l.deliveryCount) };
+}
 
 export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
   const { Contract, ledger, pureCircuits: P } = await import(pathToFileURL(path.join(OUT, "contract", "index.js")).href);
@@ -58,7 +63,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
   const log = []; // public tx log: circuit, public args, time, proof info
 
   let prover = null;
-  if (proofServer && existsSync(path.join(OUT, "keys", "postMessage.prover"))) {
+  if (proofServer && existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) {
     const { NodeZkConfigProvider } = await import("@midnight-ntwrk/midnight-js-node-zk-config-provider");
     const { httpClientProvingProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
     const { setNetworkId } = await import("@midnight-ntwrk/midnight-js-network-id");
@@ -108,11 +113,11 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
         txs.push(await run({ sk }, "createInbox", [inbox], { inboxId: b.inboxId }));
         for (const m of b.members) txs.push(await run({ sk }, "addMember", [inbox, u8(m)], { inboxId: b.inboxId, leaf: hex(P.memberLeaf(inbox, u8(m))) }));
       }
-      txs.push(await run({ sk, blind: u8(b.blind) }, "postMessage", [inbox, c], { inboxId: b.inboxId, commitment: b.commitment }));
+      txs.push(await run({ sk, blind: u8(b.blind) }, "postEnvelope", [inbox, c], { inboxId: b.inboxId, commitment: b.commitment }));
       return { txs, receipt: receipt(b.commitment) };
     },
     async ack(b) {
-      const tx = await run({ sk: u8(b.sk) }, "ackMessage", [u8(b.commitment)], { commitment: b.commitment, nullifier: hex(P.ackNullifier(u8(b.commitment), u8(b.sk))) });
+      const tx = await run({ sk: u8(b.sk) }, "ackDelivery", [u8(b.commitment)], { commitment: b.commitment, nullifier: hex(P.ackNullifier(u8(b.commitment), u8(b.sk))) });
       return { txs: [tx], receipt: receipt(b.commitment) };
     },
     async reveal(b) {
@@ -145,7 +150,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
       if (url.pathname === "/health") return send(req, res, 200, { ok: true, service: "night-messenger-chain-sim", proving: !!prover });
       if (url.pathname === "/v1/chain/summary") {
         const l = L();
-        return send(req, res, 200, { mode: prover ? "simulated ledger + real ZK proofs" : "simulated ledger, no proofs", inboxes: String(l.inboxes.size()), posts: String(l.postCount), txs: log.length });
+        return send(req, res, 200, { mode: prover ? "simulated ledger + real ZK proofs" : "simulated ledger, no proofs", ...usage(l), txs: log.length });
       }
       const m = url.pathname.match(/^\/v1\/chain\/posts\/([0-9a-f]{64})$/);
       if (m && req.method === "GET") return send(req, res, 200, receipt(m[1]));

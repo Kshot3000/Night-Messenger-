@@ -4,7 +4,7 @@
  * Real ZK proofs for every Night Messenger circuit against a local proof
  * server (default http://127.0.0.1:6300, Docker image
  * midnightntwrk/proof-server 8.1.0). Runs createInbox -> addMember x2 ->
- * postMessage -> ackMessage -> revealAuthor -> removeMember -> closeInbox in
+ * postEnvelope -> ackDelivery -> revealAuthor -> removeMember -> closeInbox in
  * the compact-runtime simulator, then asks the proof server to /check and
  * /prove each call with the full-ZK keys from `pnpm compile`.
  * No wallet, nothing submitted. Prints sizes and timings only (no secrets).
@@ -20,7 +20,7 @@ import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "managed", "night_messenger");
 const PROOF = process.env.MIDNIGHT_PROOF_SERVER ?? "http://127.0.0.1:6300";
-if (!existsSync(path.join(OUT, "keys", "postMessage.prover"))) throw new Error("no prover keys: run `pnpm compile` (full ZK build) first");
+if (!existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) throw new Error("no prover keys: run `pnpm compile` (full ZK build) first");
 if (!(await fetch(`${PROOF}/health`).then((r) => r.ok).catch(() => false))) throw new Error(`proof server ${PROOF} is not healthy (docker run -p 6300:6300 midnightntwrk/proof-server:8.1.0 -- midnight-proof-server -v)`);
 setNetworkId("preprod");
 
@@ -59,8 +59,8 @@ const c = b32(), blind = b32();
 await proveCall(owner, "createInbox", [inbox]);
 await proveCall(owner, "addMember", [inbox, P.memberCommitment(alice.sk)]);
 await proveCall(owner, "addMember", [inbox, P.memberCommitment(bob.sk)]);
-await proveCall({ ...alice, blind }, "postMessage", [inbox, c]);
-await proveCall(bob, "ackMessage", [c]);
+await proveCall({ ...alice, blind }, "postEnvelope", [inbox, c]);
+await proveCall(bob, "ackDelivery", [c]);
 await proveCall({ ...alice, blind }, "revealAuthor", [c]);
 await proveCall(owner, "removeMember", [inbox, P.memberCommitment(bob.sk)]);
 await proveCall(owner, "closeInbox", [inbox]);

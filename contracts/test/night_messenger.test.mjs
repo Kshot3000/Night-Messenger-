@@ -80,7 +80,7 @@ test("end to end: alice seals for bob, posts the commitment anonymously, bob ver
   s = call(s, owner, "addMember", INBOX, B.member);
 
   const sealed = await E.seal(A, await E.publicIdentity(B), "verified staff here: the report is real", { inbox: INBOX });
-  s = call(s, { ...aPs, blind: E.fromHex(sealed.payload.blind) }, "postMessage", INBOX, sealed.commitment);
+  s = call(s, { ...aPs, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", INBOX, sealed.commitment);
 
   const post = L(s).posts.lookup(sealed.commitment);
   assert.equal(hex(post.inboxId), hex(INBOX));
@@ -96,20 +96,20 @@ test("end to end: alice seals for bob, posts the commitment anonymously, bob ver
   assert.equal(await E.checkAuthorDisclosure({ ...d, member: hex(B.member) }, post.authorTag), false);
 
   // Delivery receipt: bob acks once, anonymously.
-  s = call(s, bPs, "ackMessage", sealed.commitment);
+  s = call(s, bPs, "ackDelivery", sealed.commitment);
   assert.equal(L(s).ackCount.lookup(sealed.commitment), 1n);
   assert.ok(L(s).acks.member(P.ackNullifier(sealed.commitment, B.chainSecret)));
-  assert.throws(() => call(s, bPs, "ackMessage", sealed.commitment), /already acknowledged/);
+  assert.throws(() => call(s, bPs, "ackDelivery", sealed.commitment), /already acknowledged/);
 });
 
 test("non-members cannot post or ack; replays of a commitment are refused", () => {
   let s = world();
   const c = b32();
-  assert.throws(() => call(s, mallory, "postMessage", INBOX, c), /no Merkle path|not a/);
-  s = call(s, { ...alice, blind: b32() }, "postMessage", INBOX, c);
-  assert.throws(() => call(s, { ...bob, blind: b32() }, "postMessage", INBOX, c), /already posted/);
-  assert.throws(() => call(s, mallory, "ackMessage", c), /no Merkle path|not a/);
-  assert.throws(() => call(s, alice, "ackMessage", b32()), /unknown message/);
+  assert.throws(() => call(s, mallory, "postEnvelope", INBOX, c), /no Merkle path|not a/);
+  s = call(s, { ...alice, blind: b32() }, "postEnvelope", INBOX, c);
+  assert.throws(() => call(s, { ...bob, blind: b32() }, "postEnvelope", INBOX, c), /already posted/);
+  assert.throws(() => call(s, mallory, "ackDelivery", c), /no Merkle path|not a/);
+  assert.throws(() => call(s, alice, "ackDelivery", b32()), /unknown message/);
 });
 
 test("membership is bound to the inbox: a member of inbox A cannot post into inbox B", () => {
@@ -117,7 +117,7 @@ test("membership is bound to the inbox: a member of inbox A cannot post into inb
   const OTHER = b32();
   s = call(s, mallory, "createInbox", OTHER); // mallory owns OTHER
   s = call(s, mallory, "addMember", OTHER, mc(mallory));
-  assert.throws(() => call(s, { ...mallory, blind: b32() }, "postMessage", INBOX, b32()), /no Merkle path|not a/);
+  assert.throws(() => call(s, { ...mallory, blind: b32() }, "postEnvelope", INBOX, b32()), /no Merkle path|not a/);
   // mallory cannot inject members into an inbox she does not own
   assert.throws(() => call(s, mallory, "addMember", INBOX, mc(mallory)), /not the inbox owner/);
 });
@@ -125,7 +125,7 @@ test("membership is bound to the inbox: a member of inbox A cannot post into inb
 test("revealAuthor: only the real author can publish their member commitment", () => {
   let s = world();
   const c = b32(), blind = b32();
-  s = call(s, { ...alice, blind }, "postMessage", INBOX, c);
+  s = call(s, { ...alice, blind }, "postEnvelope", INBOX, c);
   assert.throws(() => call(s, { ...bob, blind }, "revealAuthor", c), /not the author/);
   assert.throws(() => call(s, { ...alice, blind: b32() }, "revealAuthor", c), /not the author/);
   s = call(s, { ...alice, blind }, "revealAuthor", c);
@@ -138,16 +138,16 @@ test("removeMember revokes posting, including with a stale cached path", () => {
   const stale = L(s).members.findPathForLeaf(P.memberLeaf(INBOX, mc(alice)));
   s = call(s, owner, "removeMember", INBOX, mc(alice));
   assert.equal(L(s).inboxes.lookup(INBOX).members, 1n);
-  assert.throws(() => call(s, { ...alice, blind: b32() }, "postMessage", INBOX, b32()), /no Merkle path|not a live member/);
-  assert.throws(() => call(s, { ...alice, blind: b32(), path: stale }, "postMessage", INBOX, b32()), /not a live member/);
+  assert.throws(() => call(s, { ...alice, blind: b32() }, "postEnvelope", INBOX, b32()), /no Merkle path|not a live member/);
+  assert.throws(() => call(s, { ...alice, blind: b32(), path: stale }, "postEnvelope", INBOX, b32()), /not a live member/);
   // bob (still a member) re-derives his path against the new root and posts fine
-  s = call(s, { ...bob, blind: b32() }, "postMessage", INBOX, b32());
+  s = call(s, { ...bob, blind: b32() }, "postEnvelope", INBOX, b32());
   assert.equal(L(s).postCount, 1n);
 });
 
 test("closeInbox stops posting and adding", () => {
   let s = world();
   s = call(s, owner, "closeInbox", INBOX);
-  assert.throws(() => call(s, { ...alice, blind: b32() }, "postMessage", INBOX, b32()), /closed/);
+  assert.throws(() => call(s, { ...alice, blind: b32() }, "postEnvelope", INBOX, b32()), /closed/);
   assert.throws(() => call(s, owner, "addMember", INBOX, mc(mallory)), /closed/);
 });

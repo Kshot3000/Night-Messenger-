@@ -32,3 +32,6 @@ export const chainReceipt = (base: string, commitment: string) => call<Receipt>(
 export const chainSend = (base: string, b: { sk: string; blind: string; inboxId: string; commitment: string; members: string[] }) =>
   call<{ txs: TxInfo[]; receipt: Receipt }>(base, "/v1/chain/send", b);
 export const chainAck = (base: string, b: { sk: string; commitment: string }) => call<{ txs: TxInfo[]; receipt: Receipt }>(base, "/v1/chain/ack", b);
+export type Usage = { inboxes: string; registrations: string; envelopesPosted: string; deliveryReceipts: string; mode?: string };
+/** Aggregate ledger counters only (no per-user data). */
+export const chainSummary = (base: string) => call<Usage>(base, "/v1/chain/summary");

@@ -56,7 +56,7 @@ try {
     body: JSON.stringify({ envelope: E.toB64u(sealed.envelope) }),
   }).then((r) => r.json());
   say("relay", `stored ${sealed.envelope.length} B of ciphertext, commitment ${short(up.commitment)} (cannot read it, cannot see the sender)`);
-  state = call(state, { sk: alice.chainSecret, blind: E.fromHex(sealed.payload.blind) }, "postMessage", inbox, sealed.commitment);
+  state = call(state, { sk: alice.chainSecret, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", inbox, sealed.commitment);
   const post = ledger(state).posts.lookup(sealed.commitment);
   say("chain", `post #${post.seq}: commitment ${short(sealed.commitment)}, authorTag ${short(post.authorTag)}; membership proven, sender hidden`);
 
@@ -72,7 +72,7 @@ try {
   if (!ok) throw new Error("author tag mismatch");
 
   // 5. Bob acknowledges delivery anonymously; anyone can count receipts.
-  state = call(state, { sk: bob.chainSecret }, "ackMessage", opened.commitment);
+  state = call(state, { sk: bob.chainSecret }, "ackDelivery", opened.commitment);
   say("chain", `delivery receipts for ${short(opened.commitment)}: ${ledger(state).ackCount.lookup(opened.commitment)}`);
 
   // 6. Selective disclosure: Bob hands a reviewer {commitment, member, blind} for this one message.

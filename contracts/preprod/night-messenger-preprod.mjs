@@ -3,8 +3,8 @@
 /**
  * Night Messenger on Midnight Preprod: deploy once, then a live drill
  *   deploy -> createInbox -> addMember(alice) -> addMember(bob)
- *   -> postMessage(alice, commitment of a real sealed envelope)
- *   -> ackMessage(bob) -> read the ledger back and verify the author tag.
+ *   -> postEnvelope(alice, commitment of a real sealed envelope)
+ *   -> ackDelivery(bob) -> read the ledger back and verify the author tag.
  *
  * STATUS: written to the same pattern as ShieldPass's working Preprod drill
  * (midnight-js 4.1.1, wallet-sdk 1.2.0, proof server 8.1.0) but NOT RUN yet:
@@ -61,7 +61,7 @@ const finalized = (label, f) => {
 
 async function main() {
   if (!INDEXER) throw new Error("set BLOCKFROST_MIDNIGHT_PREPROD_ID or MIDNIGHT_INDEXER_URL");
-  if (!fs.existsSync(path.join(OUT, "keys", "postMessage.prover"))) throw new Error("no prover keys: run the full ZK compile");
+  if (!fs.existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) throw new Error("no prover keys: run the full ZK compile");
   if (!(await fetch(`${PROOF}/health`).then((r) => r.ok).catch(() => false))) throw new Error(`proof server ${PROOF} is not healthy`);
   const { Contract, ledger, pureCircuits: P } = await import(pathToFileURL(path.join(OUT, "contract/index.js")).href);
   const E = await import(pathToFileURL(E2EE).href);
@@ -162,13 +162,13 @@ async function main() {
     l = await readLedger(run.contractAddress);
     if (!l.posts.member(u8(run.commitment))) {
       const alice = await join("nmAlice", { sk: run.aliceSk, blind: run.blind });
-      run.txs.postMessage = finalized("postMessage", await alice.callTx.postMessage(inbox, u8(run.commitment)));
+      run.txs.postEnvelope = finalized("postEnvelope", await alice.callTx.postEnvelope(inbox, u8(run.commitment)));
       save();
     }
     l = await readLedger(run.contractAddress);
     if (!l.acks.member(P.ackNullifier(u8(run.commitment), u8(run.bobSk)))) {
       const bob = await join("nmBob", { sk: run.bobSk });
-      run.txs.ackMessage = finalized("ackMessage", await bob.callTx.ackMessage(u8(run.commitment)));
+      run.txs.ackDelivery = finalized("ackDelivery", await bob.callTx.ackDelivery(u8(run.commitment)));
       save();
     }
     l = await readLedger(run.contractAddress);

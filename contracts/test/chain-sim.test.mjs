@@ -22,7 +22,7 @@ test("send -> public receipt view -> ack -> anyone sees the receipt count; doubl
   const r1 = await post("send", { sk: E.toHex(A.chainSecret), blind: s.payload.blind, inboxId: E.toHex(inbox), commitment: c, members: [E.toHex(A.member), E.toHex(B.member)] });
   assert.equal(r1.status, 200);
   const sent = await r1.json();
-  assert.deepEqual(sent.txs.map((t) => t.circuit), ["createInbox", "addMember", "addMember", "postMessage"]);
+  assert.deepEqual(sent.txs.map((t) => t.circuit), ["createInbox", "addMember", "addMember", "postEnvelope"]);
   assert.equal(sent.receipt.authorTag, E.toHex(s.authorTag));
   assert.equal(JSON.stringify(sent).includes(E.toHex(A.chainSecret)), false, "public view never echoes secrets");
 
@@ -30,17 +30,19 @@ test("send -> public receipt view -> ack -> anyone sees the receipt count; doubl
   assert.equal((await post("ack", { sk: E.toHex(B.chainSecret), commitment: c })).status, 200);
   const view = await (await fetch(`${base}/v1/chain/posts/${c}`)).json();
   assert.equal(view.receipts, "1");
-  assert.deepEqual(view.txs.map((t) => t.circuit), ["postMessage", "ackMessage"]);
+  assert.deepEqual(view.txs.map((t) => t.circuit), ["postEnvelope", "ackDelivery"]);
   const again = await post("ack", { sk: E.toHex(B.chainSecret), commitment: c });
   assert.equal(again.status, 409);
   assert.match((await again.json()).error, /already acknowledged/);
+  const sum = await (await fetch(`${base}/v1/chain/summary`)).json();
+  assert.deepEqual([sum.inboxes, sum.registrations, sum.envelopesPosted, sum.deliveryReceipts], ["1", "2", "1", "1"]);
   // a stranger cannot ack
   const C = await E.createIdentity("C");
   assert.equal((await post("ack", { sk: E.toHex(C.chainSecret), commitment: c })).status, 409);
   // second message reuses the inbox (no create/add)
   const s2 = await E.seal(B, await E.publicIdentity(A), "yo", { inbox });
   const r2 = await (await post("send", { sk: E.toHex(B.chainSecret), blind: s2.payload.blind, inboxId: E.toHex(inbox), commitment: E.toHex(s2.commitment), members: [] })).json();
-  assert.deepEqual(r2.txs.map((t) => t.circuit), ["postMessage"]);
+  assert.deepEqual(r2.txs.map((t) => t.circuit), ["postEnvelope"]);
 });
 
 test("unknown commitments show posted:false; bad input is rejected", async () => {

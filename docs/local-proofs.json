@@ -3,63 +3,63 @@
   "compiler": "compactc 0.31.1",
   "runtime": "@midnight-ntwrk/compact-runtime 0.16.0",
   "proofServer": "http://127.0.0.1:6300",
-  "at": "2026-11-11T03:05:10.489Z",
+  "at": "2026-11-11T03:16:31.777Z",
   "proofs": [
     {
       "circuit": "createInbox",
-      "preimageBytes": 283,
+      "preimageBytes": 289,
       "proofBytes": 4508,
-      "checkMs": 15,
-      "proveMs": 714
+      "checkMs": 19,
+      "proveMs": 815
     },
     {
       "circuit": "addMember",
-      "preimageBytes": 764,
+      "preimageBytes": 769,
       "proofBytes": 4508,
       "checkMs": 6,
-      "proveMs": 1299
+      "proveMs": 1479
     },
     {
       "circuit": "addMember",
-      "preimageBytes": 768,
+      "preimageBytes": 772,
       "proofBytes": 4508,
-      "checkMs": 9,
-      "proveMs": 974
+      "checkMs": 8,
+      "proveMs": 1073
     },
     {
-      "circuit": "postMessage",
-      "preimageBytes": 757,
-      "proofBytes": 4508,
-      "checkMs": 20,
-      "proveMs": 2536
-    },
-    {
-      "circuit": "ackMessage",
-      "preimageBytes": 797,
+      "circuit": "postEnvelope",
+      "preimageBytes": 754,
       "proofBytes": 4508,
       "checkMs": 9,
-      "proveMs": 1415
+      "proveMs": 4675
+    },
+    {
+      "circuit": "ackDelivery",
+      "preimageBytes": 807,
+      "proofBytes": 4508,
+      "checkMs": 7,
+      "proveMs": 2754
     },
     {
       "circuit": "revealAuthor",
       "preimageBytes": 549,
       "proofBytes": 4508,
-      "checkMs": 5,
-      "proveMs": 1299
+      "checkMs": 6,
+      "proveMs": 2599
     },
     {
       "circuit": "removeMember",
-      "preimageBytes": 752,
+      "preimageBytes": 748,
       "proofBytes": 4508,
-      "checkMs": 12,
-      "proveMs": 1286
+      "checkMs": 9,
+      "proveMs": 2537
     },
     {
       "circuit": "closeInbox",
-      "preimageBytes": 403,
+      "preimageBytes": 399,
       "proofBytes": 4508,
-      "checkMs": 5,
-      "proveMs": 651
+      "checkMs": 4,
+      "proveMs": 1341
     }
   ]
 }

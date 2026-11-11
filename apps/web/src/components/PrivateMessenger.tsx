@@ -231,7 +231,7 @@ export function PrivateMessenger() {
       if (chainInfo?.ok) {
         try {
           const r = await chainSend(chain, { sk: toHex(me.chainSecret), blind: s.payload.blind, inboxId: toHex(inbox), commitment, members: [toHex(me.member), contact.member] });
-          const proof = r.txs.find((t) => t.circuit === "postMessage")?.proof;
+          const proof = r.txs.find((t) => t.circuit === "postEnvelope")?.proof;
           next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: true, seq: r.receipt.seq, receipts: r.receipt.receipts, proofMs: proof?.ms } });
         } catch (e) {
           next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: false, error: (e as Error).message } });

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { checkAuthorDisclosure, fromHex, PRODUCT, type AuthorDisclosure } from "@midnight-messenger/shared";
-import { CHAIN_KEY, DEFAULT_CHAIN, chainReceipt, type Receipt } from "@/lib/chain-client";
+import { CHAIN_KEY, DEFAULT_CHAIN, chainReceipt, chainSummary, type Receipt, type Usage } from "@/lib/chain-client";
 
 const HEX32 = /^[0-9a-f]{64}$/;
 
@@ -16,6 +16,11 @@ export function ReceiptVerifier() {
   const [error, setError] = useState("");
   const [bundle, setBundle] = useState("");
   const [authorship, setAuthorship] = useState<"" | "proven" | "rejected" | "invalid">("");
+  const [usage, setUsage] = useState<Usage | null>(null);
+
+  useEffect(() => {
+    chainSummary(chain).then(setUsage).catch(() => setUsage(null));
+  }, [chain, receipt]);
 
   useEffect(() => {
     try {
@@ -71,6 +76,12 @@ export function ReceiptVerifier() {
         <input className="pm-input pm-mono" value={chain} onChange={(e) => setChain(e.target.value)} aria-label="Chain endpoint" />
         <p className="pm-muted pm-small">Local chain simulator today (runs the real compiled contract). Midnight Preprod indexer once deployed.</p>
       </details>
+      {usage && (
+        <p className="pm-muted pm-small" aria-label="Network totals">
+          Totals from ledger counters: {usage.registrations} member registrations · {usage.envelopesPosted} envelopes posted ·{" "}
+          {usage.deliveryReceipts} delivery receipts · {usage.inboxes} inboxes
+        </p>
+      )}
       {error && <p className="pm-error" role="alert">{error}</p>}
       {receipt && !receipt.posted && <p className="pm-error" role="status">No post with this commitment on this chain.</p>}
       {receipt?.posted && (
