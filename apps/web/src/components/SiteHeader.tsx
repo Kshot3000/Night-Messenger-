@@ -20,6 +20,18 @@ export function SiteHeader() {
           <Link href="/#experience">The experience</Link>
           <Link href="/#how-it-works">How it works</Link>
           <Link
+            href="/private"
+            aria-current={pathname.startsWith("/private") ? "page" : undefined}
+          >
+            Private chat
+          </Link>
+          <Link
+            href="/verify"
+            aria-current={pathname.startsWith("/verify") ? "page" : undefined}
+          >
+            Verify a receipt
+          </Link>
+          <Link
             href="/security"
             aria-current={pathname.startsWith("/security") ? "page" : undefined}
           >

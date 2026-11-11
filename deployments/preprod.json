@@ -1,0 +1,9 @@
+{
+  "network": "midnight-preprod",
+  "status": "not-deployed",
+  "reason": "No funded Preprod wallet (tNIGHT + registered tDUST) or Blockfrost Midnight Preprod project id is available to this build. The contract compiles with full ZK keys and every circuit proves against proof server 8.1.0 (docs/local-proofs.json).",
+  "contract": "contracts/src/night_messenger.compact",
+  "compiler": "compactc 0.31.1",
+  "contractAddress": null,
+  "deployScript": "contracts/preprod/night-messenger-preprod.mjs"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@midnight-messenger/relay",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Tiny ciphertext-only mailbox relay for Night Messenger demos (no dependencies)",
+  "main": "./server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

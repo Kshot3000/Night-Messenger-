@@ -16,3 +16,13 @@ coverage
 android/.gradle
 android/app/build
 ios/Pods
+
+# Compact build output (regenerate with `pnpm --filter @midnight-messenger/contracts compile`)
+contracts/src/managed/
+# Relay data and local secrets: never commit
+apps/relay/data/
+.env
+.env.*
+!.env.example
+secrets/
+*.seed

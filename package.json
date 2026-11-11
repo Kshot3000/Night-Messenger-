@@ -1,7 +1,7 @@
 {
   "name": "night-messenger",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Night Messenger \u2014 free private DMs on Midnight with selective disclosure",
   "scripts": {
     "dev": "pnpm --filter @midnight-messenger/web dev",
@@ -12,8 +12,13 @@
     "lint": "pnpm --filter @midnight-messenger/web lint",
     "typecheck": "pnpm --filter @midnight-messenger/shared typecheck && pnpm --filter @midnight-messenger/web typecheck",
     "build:pages": "node scripts/build-pages.mjs",
-    "test": "node --experimental-strip-types --test apps/web/tests/*.test.mjs packages/shared/tests/*.test.mjs",
-    "format": "prettier --write apps/web/src packages/shared/src packages/shared/tests apps/web/tests"
+    "test": "node --experimental-strip-types --test apps/web/tests/*.test.mjs packages/shared/tests/*.test.mjs apps/relay/test/*.test.mjs",
+    "format": "prettier --write apps/web/src packages/shared/src packages/shared/tests apps/web/tests",
+    "relay": "node apps/relay/server.mjs",
+    "test:contracts": "pnpm --filter @midnight-messenger/contracts test",
+    "compile:contracts": "pnpm --filter @midnight-messenger/contracts compile",
+    "demo:e2e": "pnpm --filter @midnight-messenger/contracts demo",
+    "chain-sim": "pnpm --filter @midnight-messenger/contracts sim"
   },
   "engines": {
     "node": ">=22.18"

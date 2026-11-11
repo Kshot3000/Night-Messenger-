@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+ * night_messenger.compact — Night Messenger: private group inboxes on Midnight.
+ *
+ * What goes on-chain is deliberately tiny:
+ *   - an inbox id, its owner's commitment and a membership epoch,
+ *   - per inbox, a Merkle tree of salted member leaves (never the member list),
+ *   - per message: a 32-byte commitment to the ciphertext envelope, the inbox
+ *     it was posted to, a hiding author tag and a sequence number,
+ *   - per delivery receipt: a nullifier (one per member per message).
+ * Message bodies, keys, sender identities and the relay never touch the ledger.
+ *
+ * Identity. Each member holds a secret sk on their device.
+ *   memberCommitment(sk) = persistentHash("nm:member:v1" || sk)
+ *   ownerCommitment(sk)  = persistentHash("nm:owner:v1"  || sk)
+ *   memberLeaf(inbox, epoch, m) = persistentHash("nm:leaf:v2" || inbox || epoch || m)
+ * The owner adds a member by passing the member commitment as a private
+ * circuit argument; only the leaf is disclosed, and the leaf is computed in the
+ * circuit, so it is always bound to this inbox and its current epoch.
+ *
+ * Inbox ids are bound to their creator (no front-running).
+ *   inboxIdFor(creator, seed) = persistentHash("nm:inbox:v1" || creator || seed)
+ * where creator = memberCommitment(sk) is computed in the circuit from the
+ * caller's own secret. Nobody can create an inbox under someone else's id: a
+ * front-runner who copies the seed from the mempool gets a different id. For
+ * a DM the seed comes from the two parties' X25519 shared secret (see
+ * packages/shared e2ee.ts dmInboxSeed), so outsiders cannot even compute it.
+ *
+ * Membership trees are per inbox (Map<inboxId, HistoricMerkleTree<15>>), so
+ * one inbox's changes never touch another inbox's roots or proofs, and the
+ * 2^15 = 32,768 leaf cap applies per inbox, not to the whole contract.
+ * Removing a member never resets root history. Instead removeMember rotates
+ * the inbox epoch: every leaf of the old epoch stops proving (stale paths
+ * included, because the leaf itself is recomputed with the new epoch), and
+ * the owner re-adds the remaining members under the new epoch. Freed slots are
+ * not reused; each re-add consumes one of the inbox's 32,768 slots.
+ *
+ * Posting (sender privacy). postEnvelope proves "I hold the sk behind some leaf
+ * of this inbox" with a Merkle path against a current or recent root. The
+ * ledger learns that *a* member posted, not which one: the anonymity set is
+ * the inbox's live members.
+ *
+ * Selective disclosure (recipient can verify). The post stores
+ *   authorTag = persistentHash("nm:author:v1" || commitment || m || blind)
+ * where blind is a fresh random value the sender puts *inside* the encrypted
+ * envelope. The recipient decrypts, recomputes the tag from (commitment, the
+ * sender's member commitment, blind) and checks it against the ledger: the
+ * on-chain post was made by that member. Nobody else can, because blind is
+ * secret. Either party can later hand (m, blind) to a third party to prove
+ * authorship of one message, or the sender can publish it with revealAuthor.
+ *
+ * Delivery receipts. ackDelivery proves membership of the post's inbox and
+ * records ackNullifier = persistentHash("nm:ack:v1" || commitment || sk), so a
+ * member can acknowledge a message once, without saying who they are.
+ * postEnvelope inserts the sender's own nullifier up front, so a receipt
+ * always comes from a member other than the author (no self-receipts).
+ *
+ * Status: compiles with compactc 0.31.1. Not audited. Testnet only.
+ */
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+export struct InboxRecord {
+  owner: Bytes<32>,
+  epoch: Bytes<32>,
+  members: Uint<32>,
+  active: Boolean
+}
+
+export struct PostRecord {
+  inboxId: Bytes<32>,
+  authorTag: Bytes<32>,
+  seq: Uint<64>
+}
+
+/* ---------- public ledger ---------- */
+
+export ledger inboxes: Map<Bytes<32>, InboxRecord>;
+
+/* Per-inbox membership trees; history is never reset. */
+export ledger members: Map<Bytes<32>, HistoricMerkleTree<15, Bytes<32>>>;
+/* Every leaf ever added (leaves are epoch-bound, so old ones are inert). */
+export ledger leaves: Set<Bytes<32>>;
+
+export ledger posts: Map<Bytes<32>, PostRecord>;
+export ledger postCount: Counter;
+
+export ledger acks: Set<Bytes<32>>;
+export ledger ackCount: Map<Bytes<32>, Uint<32>>;
+
+export ledger revealedAuthors: Map<Bytes<32>, Bytes<32>>;
+
+/* Aggregate usage counters (read-only traction numbers; reveal no identities). */
+export ledger inboxCount: Counter;
+export ledger membersAdded: Counter;
+export ledger deliveryCount: Counter;
+
+/* ---------- private witnesses ---------- */
+
+witness localSecretKey(): Bytes<32>;
+witness memberPath(leaf: Bytes<32>): MerkleTreePath<15, Bytes<32>>;
+witness authorBlind(commitment: Bytes<32>): Bytes<32>;
+
+/* ---------- pure helpers (mirrored by the TypeScript SDK) ---------- */
+
+export pure circuit memberCommitment(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nm:member:v1"), sk]);
+}
+
+export pure circuit ownerCommitment(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nm:owner:v1"), sk]);
+}
+
+export pure circuit memberLeaf(inboxId: Bytes<32>, epoch: Bytes<32>, member: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([pad(32, "nm:leaf:v2"), inboxId, epoch, member]);
+}
+
+export pure circuit inboxIdFor(creator: Bytes<32>, seed: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "nm:inbox:v1"), creator, seed]);
+}
+
+export pure circuit nextEpoch(epoch: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nm:epoch:v1"), epoch]);
+}
+
+export pure circuit authorTag(commitment: Bytes<32>, member: Bytes<32>, blind: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([pad(32, "nm:author:v1"), commitment, member, blind]);
+}
+
+export pure circuit ackNullifier(commitment: Bytes<32>, sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "nm:ack:v1"), commitment, sk]);
+}
+
+/* ---------- internal checks ---------- */
+
+circuit assertOwner(inboxId: Bytes<32>): InboxRecord {
+  assert(inboxes.member(inboxId), "unknown inbox");
+  const box = inboxes.lookup(inboxId);
+  assert(disclose(ownerCommitment(localSecretKey())) == box.owner, "caller is not the inbox owner");
+  return box;
+}
+
+/* Proves the caller's sk is behind a live leaf of inboxId; returns the member commitment (private). */
+circuit proveMember(inboxId: Bytes<32>): Bytes<32> {
+  const box = inboxes.lookup(inboxId);
+  const m = memberCommitment(localSecretKey());
+  const leaf = memberLeaf(inboxId, box.epoch, m);
+  const path = memberPath(leaf);
+  assert(disclose(path.leaf == leaf), "path does not lead to this member");
+  assert(members.lookup(inboxId).checkRoot(disclose(merkleTreePathRoot<15, Bytes<32>>(path))), "not a live member of this inbox");
+  return m;
+}
+
+/* ---------- inboxes (owner) ---------- */
+
+/*
+ * The id is derived in-circuit from the caller's own member commitment and a
+ * private seed, so it cannot be claimed by anyone else. Returns the id.
+ */
+export circuit createInbox(seed: Bytes<32>): Bytes<32> {
+  const sk = localSecretKey();
+  const id = disclose(inboxIdFor(memberCommitment(sk), seed));
+  assert(!inboxes.member(id), "inbox already exists");
+  inboxes.insert(id, InboxRecord {
+    owner: disclose(ownerCommitment(sk)),
+    epoch: pad(32, ""),
+    members: 0,
+    active: true
+  });
+  members.insert(id, default<HistoricMerkleTree<15, Bytes<32>>>);
+  inboxCount.increment(1);
+  return id;
+}
+
+/* The member commitment stays private: only the in-circuit leaf is disclosed. */
+export circuit addMember(inboxId: Bytes<32>, member: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  assert(box.active, "inbox is closed");
+  const leaf = disclose(memberLeaf(id, box.epoch, member));
+  assert(!leaves.member(leaf), "already a member");
+  assert(!members.lookup(id).isFull(), "inbox member tree is full (32,768 slots)");
+  members.lookup(id).insert(leaf);
+  leaves.insert(leaf);
+  membersAdded.increment(1);
+  inboxes.insert(id, InboxRecord { owner: box.owner, epoch: box.epoch, members: (box.members + 1) as Uint<32>, active: box.active });
+}
+
+/*
+ * Revokes a member without touching root history or any other inbox: the
+ * epoch rotates, so every current leaf of this inbox (and every cached path
+ * to one) stops proving. The owner then re-adds the remaining members with
+ * addMember under the new epoch. In-flight proofs in other inboxes are
+ * unaffected.
+ */
+export circuit removeMember(inboxId: Bytes<32>, member: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  assert(leaves.member(disclose(memberLeaf(id, box.epoch, member))), "not a member");
+  inboxes.insert(id, InboxRecord { owner: box.owner, epoch: nextEpoch(box.epoch), members: 0, active: box.active });
+}
+
+export circuit closeInbox(inboxId: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  inboxes.insert(id, InboxRecord { owner: box.owner, epoch: box.epoch, members: box.members, active: false });
+}
+
+/* ---------- messages (members) ---------- */
+
+/*
+ * A member posts a ciphertext commitment. Public: inboxId, commitment, the
+ * Merkle root, the hiding author tag. Private: sk, member commitment, path,
+ * blind.
+ */
+export circuit postEnvelope(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const c = disclose(commitment);
+  assert(inboxes.member(id), "unknown inbox");
+  assert(inboxes.lookup(id).active, "inbox is closed");
+  assert(c != pad(32, ""), "empty commitment");
+  assert(!posts.member(c), "commitment already posted");
+  const m = proveMember(id);
+  const tag = disclose(authorTag(c, m, authorBlind(c)));
+  posts.insert(c, PostRecord { inboxId: id, authorTag: tag, seq: postCount.read() });
+  postCount.increment(1);
+  // Burn the sender's own ack nullifier so the author cannot "deliver" their
+  // own message: a later self-ack fails with "already acknowledged". The
+  // nullifier is a fresh pseudorandom value per (message, sk); it does not
+  // identify the sender and is not counted in ackCount / deliveryCount.
+  acks.insert(disclose(ackNullifier(c, localSecretKey())));
+}
+
+/* A member of the post's inbox acknowledges it once, anonymously. */
+export circuit ackDelivery(commitment: Bytes<32>): [] {
+  const c = disclose(commitment);
+  assert(posts.member(c), "unknown message");
+  const p = posts.lookup(c);
+  proveMember(p.inboxId);
+  const nf = disclose(ackNullifier(c, localSecretKey()));
+  assert(!acks.member(nf), "already acknowledged");
+  acks.insert(nf);
+  const n = ((ackCount.member(c) ? ackCount.lookup(c) : 0 as Uint<32>) + 1) as Uint<32>;
+  ackCount.insert(c, n);
+  deliveryCount.increment(1);
+}
+
+/* Opt-in: the author publicly discloses their member commitment for one message. */
+export circuit revealAuthor(commitment: Bytes<32>): [] {
+  const c = disclose(commitment);
+  assert(posts.member(c), "unknown message");
+  assert(!revealedAuthors.member(c), "author already revealed");
+  const m = memberCommitment(localSecretKey());
+  assert(disclose(authorTag(c, m, authorBlind(c)) == posts.lookup(c).authorTag), "caller is not the author");
+  revealedAuthors.insert(c, disclose(m));
+}

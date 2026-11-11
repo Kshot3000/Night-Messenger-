@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { PRODUCT } from "@midnight-messenger/shared";
 
-const CARDANO_ADDRESS =
-  "addr1q8hnl6vl5a6k3rw3n5g3jtte696zcl76kfatzv7gpswa9r0dj7fma6klq55y4ffm7tf0em09udnyhuk4ah92pl5x9jpqjae44v";
+/** Optional tip address (one constant: PRODUCT.tipAddress). Tipping unlocks nothing. */
+const TIP_ADDRESS = PRODUCT.tipAddress;
 
 export function DonationCard() {
   const [copied, setCopied] = useState(false);
 
   async function copyAddress() {
     try {
-      await navigator.clipboard.writeText(CARDANO_ADDRESS);
+      await navigator.clipboard.writeText(TIP_ADDRESS);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -20,14 +21,14 @@ export function DonationCard() {
 
   return (
     <div className="footer-donation">
-      <span className="footer-donation-label">SUPPORT THE PROJECT</span>
-      <strong>Cardano / ADA donations</strong>
+      <span className="footer-donation-label">SUPPORT THE DEV</span>
+      <strong>Tip in ADA (optional, unlocks nothing)</strong>
       <div className="donation-address-row">
-        <code>{CARDANO_ADDRESS}</code>
+        <code>{TIP_ADDRESS}</code>
         <button
           type="button"
           onClick={copyAddress}
-          aria-label="Copy Cardano donation address"
+          aria-label="Copy Cardano tip address"
         >
           {copied ? "Copied" : "Copy"}
         </button>

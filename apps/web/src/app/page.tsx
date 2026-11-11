@@ -12,11 +12,11 @@ const faqs = [
   ],
   [
     "Are my messages encrypted or sent to other people?",
-    "Not in this preview. Conversations, drafts, and preferences are saved in this browser as readable local data. Messages are not delivered to another person. End-to-end encryption, a message relay, and live Midnight proofs are planned. Please use sample content only.",
+    "In Private chat, yes: messages are end-to-end encrypted in your browser (X25519 + AES-256-GCM), delivered through a relay that only sees ciphertext, and each message gets an on-chain commitment and a checkable delivery receipt (local chain simulator today; Midnight Preprod next). The sample /app preview is different: it stores readable demo data locally and sends nothing. Testnet only, not audited.",
   ],
   [
     "What is selective disclosure?",
-    "It is the idea of proving a specific fact, such as delivery, without revealing the contents of a conversation. Night Messenger explores this approach for Midnight. The proof and contract integrations are still in development.",
+    "Proving one fact without revealing the rest. In Night Messenger a sender proves they are a member of the conversation without saying which member, a recipient posts a delivery receipt without saying who they are, and either side can later prove who wrote one specific message. The Compact contract and its zero-knowledge proofs run today against a local proof server; the Preprod deployment is next.",
   ],
   [
     "What happens to my demo conversations?",
@@ -24,7 +24,7 @@ const faqs = [
   ],
   [
     "Is Night Messenger open source?",
-    "Yes. The web app, Android starter, shared types, and contract interfaces are available on GitHub under the MIT license. You can inspect the code, suggest improvements, or build on it.",
+    "Yes. The web app and Android starter are MIT-licensed; the new Midnight code (Compact contract, encryption, relay, private chat) is Apache-2.0. Everything is on GitHub to inspect, improve, or build on.",
   ],
 ];
 export default function LandingPage() {
@@ -52,11 +52,14 @@ export default function LandingPage() {
               A calmer messaging experience, built for the Midnight ecosystem.
             </p>
             <div className="hero-actions">
-              <Link href="/app" className="button button-accent">
-                Find your quiet <Icon name="arrowUp" size={19} />
+              <Link href="/private" className="button button-accent">
+                Start a private chat <Icon name="arrowUp" size={19} />
               </Link>
-              <Link href="#experience" className="text-link">
-                Take a look around <Icon name="arrow" size={17} />
+              <Link href="/verify" className="text-link">
+                Verify a receipt <Icon name="arrow" size={17} />
+              </Link>
+              <Link href="/app" className="text-link">
+                Sample app <Icon name="arrow" size={17} />
               </Link>
             </div>
             <div className="hero-footnote">
@@ -239,9 +242,10 @@ export default function LandingPage() {
             <div className="honesty-note">
               <Icon name="info" size={18} />
               <p>
-                <strong>A preview with a purpose.</strong> This is a working
-                local demo. Encrypted delivery and live Midnight proofs are
-                still ahead.
+                <strong>Verified, but anonymous.</strong> Private chat now
+                encrypts end to end, delivers through a ciphertext-only relay
+                and records checkable receipts. Midnight Preprod deployment is
+                next; testnet only, not audited.
               </p>
               <Link href="/security">
                 See what’s ready <Icon name="arrowUp" size={14} />
