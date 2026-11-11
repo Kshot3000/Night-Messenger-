@@ -1,0 +1,65 @@
+{
+  "claim": "local ZK proofs against the proof server; not submitted, not a deploy",
+  "compiler": "compactc 0.31.1",
+  "runtime": "@midnight-ntwrk/compact-runtime 0.16.0",
+  "proofServer": "http://127.0.0.1:6300",
+  "at": "2026-11-11T03:05:10.489Z",
+  "proofs": [
+    {
+      "circuit": "createInbox",
+      "preimageBytes": 283,
+      "proofBytes": 4508,
+      "checkMs": 15,
+      "proveMs": 714
+    },
+    {
+      "circuit": "addMember",
+      "preimageBytes": 764,
+      "proofBytes": 4508,
+      "checkMs": 6,
+      "proveMs": 1299
+    },
+    {
+      "circuit": "addMember",
+      "preimageBytes": 768,
+      "proofBytes": 4508,
+      "checkMs": 9,
+      "proveMs": 974
+    },
+    {
+      "circuit": "postMessage",
+      "preimageBytes": 757,
+      "proofBytes": 4508,
+      "checkMs": 20,
+      "proveMs": 2536
+    },
+    {
+      "circuit": "ackMessage",
+      "preimageBytes": 797,
+      "proofBytes": 4508,
+      "checkMs": 9,
+      "proveMs": 1415
+    },
+    {
+      "circuit": "revealAuthor",
+      "preimageBytes": 549,
+      "proofBytes": 4508,
+      "checkMs": 5,
+      "proveMs": 1299
+    },
+    {
+      "circuit": "removeMember",
+      "preimageBytes": 752,
+      "proofBytes": 4508,
+      "checkMs": 12,
+      "proveMs": 1286
+    },
+    {
+      "circuit": "closeInbox",
+      "preimageBytes": 403,
+      "proofBytes": 4508,
+      "checkMs": 5,
+      "proveMs": 651
+    }
+  ]
+}

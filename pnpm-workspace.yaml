@@ -9,6 +9,7 @@ allowBuilds:
   unrs-resolver: true
   '@tailwindcss/oxide': true
   esbuild: true
+  msgpackr-extract: false
 minimumReleaseAgeExclude:
   - '@next/env@15.5.27'
   - '@next/eslint-plugin-next@15.5.27'
