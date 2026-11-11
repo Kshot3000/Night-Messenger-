@@ -1,43 +1,21 @@
-# Night Messenger — Contracts
+# Night Messenger — Compact contract
 
-Selective 1:1 DM contracts for [Midnight](https://midnight.network).
+`src/night_messenger.compact` (compactc **0.31.1**, `pragma language_version >= 0.23`). Apache-2.0.
 
-**Status:** stubs only. No Compact compile, no proof server, no deployed addresses.
-Interfaces below describe the intended surface so Compact engineers can implement without inventing APIs in the app layer.
+Private group inboxes on Midnight: salted member leaves in a `HistoricMerkleTree<16>`, anonymous `postEnvelope` with a hiding author tag, anonymous one-per-member `ackDelivery` receipts, opt-in `revealAuthor`, `removeMember` with root-history reset, `closeInbox`, and aggregate usage counters. Message bodies, keys and identities never touch the ledger. See the root README for the full table of what is public.
 
-## Goals
+```bash
+pnpm compile         # full build with proving keys -> src/managed/night_messenger (git-ignored)
+pnpm compile:fast    # --skip-zk, for tests
+pnpm test            # simulator tests for every circuit + the chain simulator
+pnpm prove:local     # real proofs against proof server 8.1.0 on :6300 (docs/local-proofs.json)
+pnpm demo            # terminal end-to-end demo (E2EE -> relay -> contract -> receipt)
+pnpm sim             # HTTP chain simulator for the web demo (NM_PROOF_SERVER for real proofs)
+pnpm stats -- --sim http://localhost:8788      # usage counters (or --contract <addr> on Preprod)
+```
 
-1. **Commit** that a sealed message exists (binding commitment), without putting plaintext on-chain.
-2. **Prove delivery** — recipient can produce a proof that they acknowledged commitment `C`.
-3. **Selective disclosure** — prove membership or attributes (e.g. time bucket) without opening content.
+The pure helpers (`memberCommitment`, `memberLeaf`, `authorTag`, `ackNullifier`) are SHA-256 over the concatenated 32-byte fields, which is exactly what `persistentHash<Vector<n, Bytes<32>>>` computes; `packages/shared/src/e2ee.ts` mirrors them and a test checks they match.
 
-## Intended circuit surface (TODO)
+Preprod: `preprod/night-messenger-preprod.mjs` deploys and runs a drill. Not run yet: it needs a funded Preprod wallet (tNIGHT + tDUST) and a Blockfrost Midnight Preprod project id.
 
-| Entry | Purpose | Public outputs (sketch) | Private witnesses (sketch) |
-| --- | --- | --- | --- |
-| `sendMessage` / `commitMessage` | Bind ciphertext commitment to thread + parties | `commitment`, `threadId` (or hash), epoch | ciphertext hash, salt, sender sk, recipient pk |
-| `proveDelivery` | Attest receipt of `commitment` | `commitment`, `delivered=true` | recipient sk, ack nonce |
-| `proveMembership` | Prove caller is party to thread | `threadId`, `isMember=true` | membership witness |
-| `proveAttribute` | Disclose one allowed attribute | `attrKey`, `attrValue` / range | full attribute set, salt |
-
-Exact Compact types, ledger schema, and nullifier rules are **TBD** — align with current Midnight Compact + ledger docs before implementing.
-
-## TypeScript stub
-
-See [`src/selective-dm.ts`](./src/selective-dm.ts) — clearly marked `TODO` / `unimplemented`.
-
-## What must never go on-chain
-
-- Message plaintext
-- Session keys / Noise secrets
-- Full participant lists beyond what a circuit explicitly discloses
-
-## Implementation notes for engineers
-
-- Prefer incremental circuits: commit first, then delivery, then attributes.
-- App layer should call these only through a typed client; do not fake proof bytes in production paths.
-- Wallet: dapps must enumerate `window.midnight` via `Object.values` / `Object.keys` (UUID injection keys) — never hardcode `mnLace`.
-
-## License
-
-Same as repo root (see root README).
+Not audited. Testnet only.
