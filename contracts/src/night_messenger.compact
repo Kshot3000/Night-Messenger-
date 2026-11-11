@@ -1,0 +1,211 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+ * night_messenger.compact — Night Messenger: private group inboxes on Midnight.
+ *
+ * What goes on-chain is deliberately tiny:
+ *   - an inbox id and its owner's commitment,
+ *   - a Merkle tree of salted member leaves (never the member list),
+ *   - per message: a 32-byte commitment to the ciphertext envelope, the inbox
+ *     it was posted to, a hiding author tag and a sequence number,
+ *   - per delivery receipt: a nullifier (one per member per message).
+ * Message bodies, keys, sender identities and the relay never touch the ledger.
+ *
+ * Identity. Each member holds a secret sk on their device.
+ *   memberCommitment(sk) = persistentHash("nm:member:v1" || sk)
+ *   ownerCommitment(sk)  = persistentHash("nm:owner:v1"  || sk)
+ *   memberLeaf(inbox, m) = persistentHash("nm:leaf:v1"   || inbox || m)
+ * The owner adds a member by passing the member commitment as a private
+ * circuit argument; only the leaf is disclosed, and the leaf is computed in the
+ * circuit, so it is always bound to this inbox.
+ *
+ * Posting (sender privacy). postMessage proves "I hold the sk behind some leaf
+ * of this inbox" with a Merkle path against a current or recent root. The
+ * ledger learns that *a* member posted, not which one: the anonymity set is
+ * the inbox's live members.
+ *
+ * Selective disclosure (recipient can verify). The post stores
+ *   authorTag = persistentHash("nm:author:v1" || commitment || m || blind)
+ * where blind is a fresh random value the sender puts *inside* the encrypted
+ * envelope. The recipient decrypts, recomputes the tag from (commitment, the
+ * sender's member commitment, blind) and checks it against the ledger: the
+ * on-chain post was made by that member. Nobody else can, because blind is
+ * secret. Either party can later hand (m, blind) to a third party to prove
+ * authorship of one message, or the sender can publish it with revealAuthor.
+ *
+ * Delivery receipts. ackMessage proves membership of the post's inbox and
+ * records ackNullifier = persistentHash("nm:ack:v1" || commitment || sk), so a
+ * member can acknowledge a message once, without saying who they are.
+ *
+ * Status: compiles with compactc 0.31.1. Not audited. Testnet only.
+ */
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+export struct InboxRecord {
+  owner: Bytes<32>,
+  members: Uint<32>,
+  active: Boolean
+}
+
+export struct PostRecord {
+  inboxId: Bytes<32>,
+  authorTag: Bytes<32>,
+  seq: Uint<64>
+}
+
+/* ---------- public ledger ---------- */
+
+export ledger inboxes: Map<Bytes<32>, InboxRecord>;
+
+export ledger members: HistoricMerkleTree<16, Bytes<32>>;
+export ledger memberIndex: Map<Bytes<32>, Uint<64>>;
+export ledger memberInbox: Map<Bytes<32>, Bytes<32>>;
+export ledger memberSlots: Counter;
+
+export ledger posts: Map<Bytes<32>, PostRecord>;
+export ledger postCount: Counter;
+
+export ledger acks: Set<Bytes<32>>;
+export ledger ackCount: Map<Bytes<32>, Uint<32>>;
+
+export ledger revealedAuthors: Map<Bytes<32>, Bytes<32>>;
+
+/* ---------- private witnesses ---------- */
+
+witness localSecretKey(): Bytes<32>;
+witness memberPath(leaf: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
+witness authorBlind(commitment: Bytes<32>): Bytes<32>;
+
+/* ---------- pure helpers (mirrored by the TypeScript SDK) ---------- */
+
+export pure circuit memberCommitment(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nm:member:v1"), sk]);
+}
+
+export pure circuit ownerCommitment(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nm:owner:v1"), sk]);
+}
+
+export pure circuit memberLeaf(inboxId: Bytes<32>, member: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "nm:leaf:v1"), inboxId, member]);
+}
+
+export pure circuit authorTag(commitment: Bytes<32>, member: Bytes<32>, blind: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([pad(32, "nm:author:v1"), commitment, member, blind]);
+}
+
+export pure circuit ackNullifier(commitment: Bytes<32>, sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "nm:ack:v1"), commitment, sk]);
+}
+
+/* ---------- internal checks ---------- */
+
+circuit assertOwner(inboxId: Bytes<32>): InboxRecord {
+  assert(inboxes.member(inboxId), "unknown inbox");
+  const box = inboxes.lookup(inboxId);
+  assert(disclose(ownerCommitment(localSecretKey())) == box.owner, "caller is not the inbox owner");
+  return box;
+}
+
+/* Proves the caller's sk is behind a live leaf of inboxId; returns the member commitment (private). */
+circuit proveMember(inboxId: Bytes<32>): Bytes<32> {
+  const m = memberCommitment(localSecretKey());
+  const leaf = memberLeaf(inboxId, m);
+  const path = memberPath(leaf);
+  assert(disclose(path.leaf == leaf), "path does not lead to this member");
+  assert(members.checkRoot(disclose(merkleTreePathRoot<16, Bytes<32>>(path))), "not a live member of this inbox");
+  return m;
+}
+
+/* ---------- inboxes (owner) ---------- */
+
+export circuit createInbox(inboxId: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  assert(id != pad(32, ""), "empty inbox id");
+  assert(!inboxes.member(id), "inbox already exists");
+  inboxes.insert(id, InboxRecord {
+    owner: disclose(ownerCommitment(localSecretKey())),
+    members: 0,
+    active: true
+  });
+}
+
+/* The member commitment stays private: only the in-circuit leaf is disclosed. */
+export circuit addMember(inboxId: Bytes<32>, member: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  assert(box.active, "inbox is closed");
+  const leaf = disclose(memberLeaf(id, member));
+  assert(!memberIndex.member(leaf), "already a member");
+  assert(!members.isFull(), "member tree is full");
+  const idx = memberSlots.read();
+  members.insertIndex(leaf, idx);
+  memberSlots.increment(1);
+  memberIndex.insert(leaf, idx);
+  memberInbox.insert(leaf, id);
+  inboxes.insert(id, InboxRecord { owner: box.owner, members: (box.members + 1) as Uint<32>, active: box.active });
+}
+
+/* Empties the member's slot and resets root history so stale paths stop verifying. */
+export circuit removeMember(inboxId: Bytes<32>, member: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  const leaf = disclose(memberLeaf(id, member));
+  assert(memberIndex.member(leaf), "not a member");
+  members.insertIndexDefault(memberIndex.lookup(leaf));
+  members.resetHistory();
+  memberIndex.remove(leaf);
+  memberInbox.remove(leaf);
+  inboxes.insert(id, InboxRecord { owner: box.owner, members: (box.members - 1) as Uint<32>, active: box.active });
+}
+
+export circuit closeInbox(inboxId: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const box = assertOwner(id);
+  inboxes.insert(id, InboxRecord { owner: box.owner, members: box.members, active: false });
+}
+
+/* ---------- messages (members) ---------- */
+
+/*
+ * A member posts a ciphertext commitment. Public: inboxId, commitment, the
+ * Merkle root, the hiding author tag. Private: sk, member commitment, path,
+ * blind.
+ */
+export circuit postMessage(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
+  const id = disclose(inboxId);
+  const c = disclose(commitment);
+  assert(inboxes.member(id), "unknown inbox");
+  assert(inboxes.lookup(id).active, "inbox is closed");
+  assert(c != pad(32, ""), "empty commitment");
+  assert(!posts.member(c), "commitment already posted");
+  const m = proveMember(id);
+  const tag = disclose(authorTag(c, m, authorBlind(c)));
+  posts.insert(c, PostRecord { inboxId: id, authorTag: tag, seq: postCount.read() });
+  postCount.increment(1);
+}
+
+/* A member of the post's inbox acknowledges it once, anonymously. */
+export circuit ackMessage(commitment: Bytes<32>): [] {
+  const c = disclose(commitment);
+  assert(posts.member(c), "unknown message");
+  const p = posts.lookup(c);
+  proveMember(p.inboxId);
+  const nf = disclose(ackNullifier(c, localSecretKey()));
+  assert(!acks.member(nf), "already acknowledged");
+  acks.insert(nf);
+  const n = ((ackCount.member(c) ? ackCount.lookup(c) : 0 as Uint<32>) + 1) as Uint<32>;
+  ackCount.insert(c, n);
+}
+
+/* Opt-in: the author publicly discloses their member commitment for one message. */
+export circuit revealAuthor(commitment: Bytes<32>): [] {
+  const c = disclose(commitment);
+  assert(posts.member(c), "unknown message");
+  assert(!revealedAuthors.member(c), "author already revealed");
+  const m = memberCommitment(localSecretKey());
+  assert(disclose(authorTag(c, m, authorBlind(c)) == posts.lookup(c).authorTag), "caller is not the author");
+  revealedAuthors.insert(c, disclose(m));
+}

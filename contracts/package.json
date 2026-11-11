@@ -1,9 +1,19 @@
 {
   "name": "@midnight-messenger/contracts",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Compact / Midnight contract stubs for Night Messenger selective DMs",
+  "description": "Night Messenger Compact contract: private group inboxes, ciphertext commitments, anonymous membership proofs, selective author disclosure",
   "type": "module",
   "main": "./src/selective-dm.ts",
-  "types": "./src/selective-dm.ts"
+  "types": "./src/selective-dm.ts",
+  "scripts": {
+    "compile": "compact compile +0.31.1 src/night_messenger.compact src/managed/night_messenger",
+    "compile:fast": "compact compile +0.31.1 --skip-zk src/night_messenger.compact src/managed/night_messenger",
+    "test": "pnpm run compile:fast && node --experimental-strip-types --no-warnings --test test/*.test.mjs",
+    "prove:local": "node --experimental-strip-types --no-warnings scripts/prove-local.mjs",
+    "demo": "pnpm run compile:fast && node --experimental-strip-types --no-warnings scripts/e2e-demo.mjs"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0"
+  }
 }
