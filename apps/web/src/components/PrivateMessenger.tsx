@@ -6,9 +6,8 @@ import {
   PRODUCT,
   backupIdentity,
   createIdentity,
-  dmInboxId,
+  dmInboxes,
   fromB64u,
-  fromHex,
   inviteCode,
   mailboxFor,
   open as openEnvelope,
@@ -25,7 +24,7 @@ import { Brand } from "./Brand";
 import { Icon } from "./Icon";
 import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
-import { CHAIN_KEY, DEFAULT_CHAIN, chainAck, chainHealth, chainReceipt, chainSend } from "@/lib/chain-client";
+import { CHAIN_KEY, DEFAULT_CHAIN, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
 
 type Boot = "loading" | "unsupported" | "setup" | "ready";
 const POLL_MS = 3000;
@@ -135,6 +134,9 @@ export function PrivateMessenger() {
           s = addContact(s, stranger);
           contact = s.contacts.find((c) => c.mailbox === stranger.mailbox)!;
         }
+        // The payload must name one of the two DM inbox ids only this pair can derive.
+        const dm = await dmInboxes(me, contact);
+        if (o.payload.inbox !== toHex(dm.mine) && o.payload.inbox !== toHex(dm.theirs)) continue;
         const msg: ChatMessage = {
           id: o.payload.id,
           dir: "in",
@@ -205,7 +207,10 @@ export function PrivateMessenger() {
     if (!relayOk) return setNotice(`Relay ${relay} is offline. Start it with: pnpm relay`);
     setBusy(true);
     try {
-      const inbox = await dmInboxId(me.member, fromHex(contact.member));
+      // Reuse the DM inbox the contact created, if any; otherwise use (and later create) ours.
+      const dm = await dmInboxes(me, contact);
+      const theirsExists = chainInfo?.ok ? await chainInbox(chain, toHex(dm.theirs)).then((r) => r.exists).catch(() => false) : false;
+      const inbox = theirsExists ? dm.theirs : dm.mine;
       const s = await seal(me, contact, body, { inbox });
       const up = await fetch(`${relay.replace(/\/$/, "")}/v1/mailboxes/${contact.mailbox}/messages`, {
         method: "POST",
@@ -230,7 +235,7 @@ export function PrivateMessenger() {
       await commit(next);
       if (chainInfo?.ok) {
         try {
-          const r = await chainSend(chain, { sk: toHex(me.chainSecret), blind: s.payload.blind, inboxId: toHex(inbox), commitment, members: [toHex(me.member), contact.member] });
+          const r = await chainSend(chain, { sk: toHex(me.chainSecret), blind: s.payload.blind, seed: theirsExists ? undefined : toHex(dm.seed), inboxId: toHex(inbox), commitment, members: [toHex(me.member), contact.member] });
           const proof = r.txs.find((t) => t.circuit === "postEnvelope")?.proof;
           next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: true, seq: r.receipt.seq, receipts: r.receipt.receipts, proofMs: proof?.ms } });
         } catch (e) {

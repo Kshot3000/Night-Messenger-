@@ -48,7 +48,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
   const witnesses = {
     localSecretKey: ({ privateState }) => [privateState, privateState.sk],
     memberPath: ({ privateState, ledger: l }, leaf) => {
-      const p = l.members.findPathForLeaf(leaf);
+      const p = l.members.member(privateState.inbox) ? l.members.lookup(privateState.inbox).findPathForLeaf(leaf) : undefined;
       if (!p) throw new Error("not a member of this inbox");
       return [privateState, p];
     },
@@ -84,6 +84,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
     state = r.context.currentQueryContext.state; // commit only after a successful proof
     const entry = { n: log.length + 1, circuit: name, public: publicArgs, at: new Date().toISOString(), proof };
     log.push(entry);
+    Object.defineProperty(entry, "result", { value: r.result, enumerable: false });
     return entry;
   }
 
@@ -110,14 +111,20 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
       const l = L();
       const txs = [];
       if (!l.inboxes.member(inbox)) {
-        txs.push(await run({ sk }, "createInbox", [inbox], { inboxId: b.inboxId }));
-        for (const m of b.members) txs.push(await run({ sk }, "addMember", [inbox, u8(m)], { inboxId: b.inboxId, leaf: hex(P.memberLeaf(inbox, u8(m))) }));
+        // createInbox derives the id from the caller's own member commitment + seed,
+        // so a caller can only create an inbox whose id is bound to them.
+        if (!b.seed || hex(P.inboxIdFor(P.memberCommitment(sk), u8(b.seed))) !== b.inboxId) throw new Error("inbox id is not bound to this sender (wrong seed)");
+        txs.push(await run({ sk }, "createInbox", [u8(b.seed)], { inboxId: b.inboxId }));
+        const epoch = L().inboxes.lookup(inbox).epoch;
+        for (const m of b.members) txs.push(await run({ sk }, "addMember", [inbox, u8(m)], { inboxId: b.inboxId, leaf: hex(P.memberLeaf(inbox, epoch, u8(m))) }));
       }
-      txs.push(await run({ sk, blind: u8(b.blind) }, "postEnvelope", [inbox, c], { inboxId: b.inboxId, commitment: b.commitment }));
+      txs.push(await run({ sk, blind: u8(b.blind), inbox }, "postEnvelope", [inbox, c], { inboxId: b.inboxId, commitment: b.commitment }));
       return { txs, receipt: receipt(b.commitment) };
     },
     async ack(b) {
-      const tx = await run({ sk: u8(b.sk) }, "ackDelivery", [u8(b.commitment)], { commitment: b.commitment, nullifier: hex(P.ackNullifier(u8(b.commitment), u8(b.sk))) });
+      const k = u8(b.commitment);
+      const inbox = L().posts.member(k) ? L().posts.lookup(k).inboxId : undefined;
+      const tx = await run({ sk: u8(b.sk), inbox }, "ackDelivery", [u8(b.commitment)], { commitment: b.commitment, nullifier: hex(P.ackNullifier(u8(b.commitment), u8(b.sk))) });
       return { txs: [tx], receipt: receipt(b.commitment) };
     },
     async reveal(b) {
@@ -126,7 +133,7 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
     },
   };
   const valid = {
-    send: (b) => HEX32.test(b?.sk) && HEX32.test(b?.blind) && HEX32.test(b?.inboxId) && HEX32.test(b?.commitment) && Array.isArray(b?.members) && b.members.length <= 2 && b.members.every((m) => HEX32.test(m)),
+    send: (b) => HEX32.test(b?.sk) && HEX32.test(b?.blind) && HEX32.test(b?.inboxId) && (b?.seed === undefined || HEX32.test(b.seed)) && HEX32.test(b?.commitment) && Array.isArray(b?.members) && b.members.length <= 2 && b.members.every((m) => HEX32.test(m)),
     ack: (b) => HEX32.test(b?.sk) && HEX32.test(b?.commitment),
     reveal: (b) => HEX32.test(b?.sk) && HEX32.test(b?.blind) && HEX32.test(b?.commitment),
   };
@@ -154,6 +161,13 @@ export async function createChainSim({ proofServer = "", origins = "*" } = {}) {
       }
       const m = url.pathname.match(/^\/v1\/chain\/posts\/([0-9a-f]{64})$/);
       if (m && req.method === "GET") return send(req, res, 200, receipt(m[1]));
+      const ib = url.pathname.match(/^\/v1\/chain\/inboxes\/([0-9a-f]{64})$/);
+      if (ib && req.method === "GET") {
+        const l = L(), k = u8(ib[1]);
+        if (!l.inboxes.member(k)) return send(req, res, 200, { inboxId: ib[1], exists: false });
+        const box = l.inboxes.lookup(k);
+        return send(req, res, 200, { inboxId: ib[1], exists: true, members: String(box.members), active: box.active });
+      }
       const a = url.pathname.match(/^\/v1\/chain\/(send|ack|reveal)$/);
       if (a && req.method === "POST") {
         let raw = "";

@@ -22,7 +22,7 @@ const RELAY = `http://127.0.0.1:${relay.address().port}`;
 
 const witnesses = {
   localSecretKey: ({ privateState }) => [privateState, privateState.sk],
-  memberPath: ({ privateState, ledger: l }, leaf) => [privateState, l.members.findPathForLeaf(leaf)],
+  memberPath: ({ privateState, ledger: l }, leaf) => [privateState, l.members.lookup(privateState.inbox).findPathForLeaf(leaf)],
   authorBlind: ({ privateState }) => [privateState, privateState.blind ?? new Uint8Array(32)],
 };
 const contract = new Contract(witnesses);
@@ -41,11 +41,14 @@ try {
   say("bob", `identity ready, member ${short(bob.member)}, mailbox ${short(bobInvite.mailbox)}`);
 
   // 2. Alice opens a DM inbox on the (simulated) contract and adds both members.
-  const inbox = await E.dmInboxId(alice.member, E.fromHex(bobInvite.member));
-  let state = contract.initialState(RT.createConstructorContext({ sk: alice.chainSecret }, COIN)).currentContractState.data;
-  state = call(state, { sk: alice.chainSecret }, "createInbox", inbox);
-  state = call(state, { sk: alice.chainSecret }, "addMember", inbox, alice.member);
-  state = call(state, { sk: alice.chainSecret }, "addMember", inbox, E.fromHex(bobInvite.member));
+  //    The id comes from their X25519 shared secret and is bound to Alice in-circuit.
+  const dm = await E.dmInboxes(alice, bobInvite);
+  const inbox = dm.mine;
+  const A = { sk: alice.chainSecret, inbox };
+  let state = contract.initialState(RT.createConstructorContext(A, COIN)).currentContractState.data;
+  state = call(state, A, "createInbox", dm.seed);
+  state = call(state, A, "addMember", inbox, alice.member);
+  state = call(state, A, "addMember", inbox, E.fromHex(bobInvite.member));
   say("chain", `inbox ${short(inbox)} created with ${ledger(state).inboxes.lookup(inbox).members} private member leaves`);
 
   // 3. Alice seals, uploads ciphertext to Bob's mailbox, posts the commitment on-chain.
@@ -56,14 +59,15 @@ try {
     body: JSON.stringify({ envelope: E.toB64u(sealed.envelope) }),
   }).then((r) => r.json());
   say("relay", `stored ${sealed.envelope.length} B of ciphertext, commitment ${short(up.commitment)} (cannot read it, cannot see the sender)`);
-  state = call(state, { sk: alice.chainSecret, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", inbox, sealed.commitment);
+  state = call(state, { ...A, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", inbox, sealed.commitment);
   const post = ledger(state).posts.lookup(sealed.commitment);
   say("chain", `post #${post.seq}: commitment ${short(sealed.commitment)}, authorTag ${short(post.authorTag)}; membership proven, sender hidden`);
 
   // 4. Bob polls his mailbox, decrypts, and checks the ledger.
   const inboxMsgs = await fetch(`${RELAY}/v1/mailboxes/${bobInvite.mailbox}/messages?after=0`).then((r) => r.json());
   const env = E.fromB64u(inboxMsgs.messages[0].envelope);
-  const opened = await E.open(bob, env);
+  const bDm = await E.dmInboxes(bob, aliceInvite);
+  const opened = await E.open(bob, env, { expectedInboxes: [bDm.mine, bDm.theirs] });
   if (opened.senderKey !== aliceInvite.encPublic) throw new Error("sender key does not match Alice's invite");
   say("bob", `decrypted "${opened.payload.body}" from ${opened.payload.from} (sender key matches Alice's invite)`);
   const onChain = ledger(state).posts.lookup(opened.commitment);
@@ -72,7 +76,7 @@ try {
   if (!ok) throw new Error("author tag mismatch");
 
   // 5. Bob acknowledges delivery anonymously; anyone can count receipts.
-  state = call(state, { sk: bob.chainSecret }, "ackDelivery", opened.commitment);
+  state = call(state, { sk: bob.chainSecret, inbox }, "ackDelivery", opened.commitment);
   say("chain", `delivery receipts for ${short(opened.commitment)}: ${ledger(state).ackCount.lookup(opened.commitment)}`);
 
   // 6. Selective disclosure: Bob hands a reviewer {commitment, member, blind} for this one message.

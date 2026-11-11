@@ -91,9 +91,15 @@ export async function sha256(...parts: Uint8Array[]): Promise<Uint8Array> {
 export const memberCommitment = (sk: Uint8Array) => sha256(pad32("nm:member:v1"), sk);
 /** = ownerCommitment(sk) */
 export const ownerCommitment = (sk: Uint8Array) => sha256(pad32("nm:owner:v1"), sk);
-/** = memberLeaf(inboxId, member) */
-export const memberLeaf = (inboxId: Uint8Array, member: Uint8Array) =>
-  sha256(pad32("nm:leaf:v1"), inboxId, member);
+/** = memberLeaf(inboxId, epoch, member); a new inbox starts at epoch 0x00..00 */
+export const memberLeaf = (inboxId: Uint8Array, epoch: Uint8Array, member: Uint8Array) =>
+  sha256(pad32("nm:leaf:v2"), inboxId, epoch, member);
+/** The first epoch of every inbox. */
+export const INITIAL_EPOCH = new Uint8Array(32);
+/** = nextEpoch(epoch), applied by removeMember */
+export const nextEpoch = (epoch: Uint8Array) => sha256(pad32("nm:epoch:v1"), epoch);
+/** = inboxIdFor(creatorMember, seed): createInbox derives the id in-circuit from the caller's own member commitment. */
+export const inboxIdFor = (creator: Uint8Array, seed: Uint8Array) => sha256(pad32("nm:inbox:v1"), creator, seed);
 /** = authorTag(commitment, member, blind) */
 export const authorTag = (commitment: Uint8Array, member: Uint8Array, blind: Uint8Array) =>
   sha256(pad32("nm:author:v1"), commitment, member, blind);
@@ -103,11 +109,6 @@ export const ackNullifier = (commitment: Uint8Array, sk: Uint8Array) =>
 /** The on-chain message commitment: SHA-256 over the exact envelope bytes. */
 export const envelopeCommitment = (envelope: Uint8Array) => sha256(envelope);
 
-/** A 1:1 DM inbox id both sides derive the same way (order-independent). */
-export async function dmInboxId(memberA: Uint8Array, memberB: Uint8Array): Promise<Uint8Array> {
-  const [x, y] = toHex(memberA) < toHex(memberB) ? [memberA, memberB] : [memberB, memberA];
-  return sha256(pad32("nm:dm-inbox:v1"), x, y);
-}
 
 // ------------------------------------------------------------------ keys
 
@@ -190,6 +191,29 @@ async function hkdfKey(ikm: Uint8Array, salt: Uint8Array, info: string): Promise
   const base = await subtle().importKey("raw", buf(ikm), "HKDF", false, ["deriveKey"]);
   return subtle().deriveKey({ name: "HKDF", hash: "SHA-256", salt: buf(salt), info: buf(te.encode(info)) }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
+/**
+ * DM inbox seed: HKDF over the two parties' static X25519 shared secret, so
+ * only the two of them can compute it (member commitments alone are public
+ * and are not enough). Order-independent.
+ */
+export async function dmInboxSeed(me: Identity, peerEncPublic: Uint8Array): Promise<Uint8Array> {
+  const ss = await x25519(me.encPrivate, peerEncPublic);
+  const [x, y] = toHex(me.encPublic) < toHex(peerEncPublic) ? [me.encPublic, peerEncPublic] : [peerEncPublic, me.encPublic];
+  const base = await subtle().importKey("raw", buf(ss), "HKDF", false, ["deriveBits"]);
+  const bits = await subtle().deriveBits({ name: "HKDF", hash: "SHA-256", salt: buf(concat(x, y)), info: buf(te.encode("night-messenger/v1/dm-inbox-seed")) }, base, 256);
+  return new Uint8Array(bits);
+}
+
+/**
+ * The only two valid ids for a DM between me and peer: the inbox I create
+ * (inboxIdFor(me.member, seed)) and the one they create. Either may exist on
+ * chain; a third party can create neither.
+ */
+export async function dmInboxes(me: Identity, peer: PublicIdentity): Promise<{ seed: Uint8Array; mine: Uint8Array; theirs: Uint8Array }> {
+  const seed = await dmInboxSeed(me, fromB64u(peer.encPublic));
+  return { seed, mine: await inboxIdFor(me.member, seed), theirs: await inboxIdFor(fromHex(peer.member), seed) };
+}
+
 const gcm = async (mode: "encrypt" | "decrypt", key: CryptoKey, iv: Uint8Array, data: Uint8Array, aad: Uint8Array) =>
   new Uint8Array(await subtle()[mode]({ name: "AES-GCM", iv: buf(iv), additionalData: buf(aad) }, key, buf(data)));
 
@@ -225,7 +249,7 @@ export async function seal(
   const text = String(body ?? "");
   if (!text.trim()) throw new Error("message is empty");
   const R = fromB64u(recipient.encPublic);
-  const inbox = opts.inbox ?? (await dmInboxId(sender.member, fromHex(recipient.member)));
+  const inbox = opts.inbox ?? (await dmInboxes(sender, recipient)).mine;
   const blind = rand(32);
   const payload: Payload = {
     t: "msg",
@@ -263,7 +287,11 @@ export type Opened = {
   authorTag: Uint8Array; // recomputed; compare with the ledger's posts[commitment].authorTag
 };
 
-export async function open(recipient: Identity, envelope: Uint8Array): Promise<Opened> {
+/**
+ * Decrypts an envelope. With opts.expectedInboxes, also refuses a payload
+ * whose inbox id is not one of them (use dmInboxes(me, sender) for a DM).
+ */
+export async function open(recipient: Identity, envelope: Uint8Array, opts: { expectedInboxes?: Uint8Array[] } = {}): Promise<Opened> {
   if (envelope.length < HDR + 12 + ENC_S + 12 + 16 + 2 || envelope[0] !== ENVELOPE_VERSION) throw new Error("not a Night Messenger envelope");
   const header = envelope.subarray(0, HDR);
   const ePub = envelope.subarray(1, HDR);
@@ -286,6 +314,7 @@ export async function open(recipient: Identity, envelope: Uint8Array): Promise<O
     throw new Error("cannot decrypt: not for this identity or tampered");
   }
   const payload = parsePayload(td.decode(plain));
+  if (opts.expectedInboxes && !opts.expectedInboxes.some((x) => toHex(x) === payload.inbox)) throw new Error("message names an unexpected inbox");
   const commitment = await envelopeCommitment(envelope);
   return { payload, senderKey: toB64u(S), commitment, authorTag: await authorTag(commitment, fromHex(payload.member), fromHex(payload.blind)) };
 }

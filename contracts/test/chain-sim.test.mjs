@@ -16,17 +16,27 @@ const post = (p, body) => fetch(`${base}/v1/chain/${p}`, { method: "POST", heade
 test("send -> public receipt view -> ack -> anyone sees the receipt count; double ack refused", async () => {
   const A = await E.createIdentity("A");
   const B = await E.createIdentity("B");
-  const inbox = await E.dmInboxId(A.member, B.member);
+  const dm = await E.dmInboxes(A, await E.publicIdentity(B));
+  const inbox = dm.mine;
   const s = await E.seal(A, await E.publicIdentity(B), "hi", { inbox });
   const c = E.toHex(s.commitment);
-  const r1 = await post("send", { sk: E.toHex(A.chainSecret), blind: s.payload.blind, inboxId: E.toHex(inbox), commitment: c, members: [E.toHex(A.member), E.toHex(B.member)] });
+  // the inbox id is creator-bound: a wrong seed is refused before any circuit runs
+  const bad = await post("send", { sk: E.toHex(A.chainSecret), blind: s.payload.blind, seed: E.toHex(new Uint8Array(32)), inboxId: E.toHex(inbox), commitment: c, members: [] });
+  assert.equal(bad.status, 409);
+  assert.equal((await (await fetch(`${base}/v1/chain/inboxes/${E.toHex(inbox)}`)).json()).exists, false);
+  const r1 = await post("send", { sk: E.toHex(A.chainSecret), blind: s.payload.blind, seed: E.toHex(dm.seed), inboxId: E.toHex(inbox), commitment: c, members: [E.toHex(A.member), E.toHex(B.member)] });
   assert.equal(r1.status, 200);
   const sent = await r1.json();
   assert.deepEqual(sent.txs.map((t) => t.circuit), ["createInbox", "addMember", "addMember", "postEnvelope"]);
   assert.equal(sent.receipt.authorTag, E.toHex(s.authorTag));
   assert.equal(JSON.stringify(sent).includes(E.toHex(A.chainSecret)), false, "public view never echoes secrets");
 
+  assert.equal((await (await fetch(`${base}/v1/chain/inboxes/${E.toHex(inbox)}`)).json()).exists, true);
   assert.equal((await (await fetch(`${base}/v1/chain/posts/${c}`)).json()).receipts, "0");
+  // the sender cannot receipt their own message
+  const self = await post("ack", { sk: E.toHex(A.chainSecret), commitment: c });
+  assert.equal(self.status, 409);
+  assert.match((await self.json()).error, /already acknowledged/);
   assert.equal((await post("ack", { sk: E.toHex(B.chainSecret), commitment: c })).status, 200);
   const view = await (await fetch(`${base}/v1/chain/posts/${c}`)).json();
   assert.equal(view.receipts, "1");

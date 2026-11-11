@@ -29,7 +29,9 @@ async function call<T>(base: string, path: string, body?: unknown): Promise<T> {
 }
 export const chainHealth = (base: string) => call<{ ok: boolean; proving: boolean }>(base, "/health");
 export const chainReceipt = (base: string, commitment: string) => call<Receipt>(base, `/v1/chain/posts/${commitment}`);
-export const chainSend = (base: string, b: { sk: string; blind: string; inboxId: string; commitment: string; members: string[] }) =>
+export const chainInbox = (base: string, inboxId: string) => call<{ inboxId: string; exists: boolean; members?: string; active?: boolean }>(base, `/v1/chain/inboxes/${inboxId}`);
+/** seed: the DM inbox seed, needed only when this send creates the inbox (the id is bound to the sender in-circuit). */
+export const chainSend = (base: string, b: { sk: string; blind: string; seed?: string; inboxId: string; commitment: string; members: string[] }) =>
   call<{ txs: TxInfo[]; receipt: Receipt }>(base, "/v1/chain/send", b);
 export const chainAck = (base: string, b: { sk: string; commitment: string }) => call<{ txs: TxInfo[]; receipt: Receipt }>(base, "/v1/chain/ack", b);
 export type Usage = { inboxes: string; registrations: string; envelopesPosted: string; deliveryReceipts: string; mode?: string };

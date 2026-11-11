@@ -28,7 +28,7 @@ const { Contract, pureCircuits: P } = await import(path.join(OUT, "contract", "i
 const b32 = () => new Uint8Array(randomBytes(32));
 const witnesses = {
   localSecretKey: ({ privateState }) => [privateState, privateState.sk],
-  memberPath: ({ privateState, ledger: l }, leaf) => [privateState, l.members.findPathForLeaf(leaf)],
+  memberPath: ({ privateState, ledger: l }, leaf) => [privateState, l.members.lookup(privateState.inbox).findPathForLeaf(leaf)],
   authorBlind: ({ privateState }) => [privateState, privateState.blind ?? new Uint8Array(32)],
 };
 const contract = new Contract(witnesses);
@@ -53,10 +53,12 @@ async function proveCall(ps, name, args) {
   console.error(`proved ${name}: ${proof.byteLength} B in ${t2 - t1} ms`);
 }
 
-const inbox = b32();
-const alice = { sk: b32() }, bob = { sk: b32() };
+const seed = b32();
+const inbox = P.inboxIdFor(P.memberCommitment(owner.sk), seed);
+owner.inbox = inbox;
+const alice = { sk: b32(), inbox }, bob = { sk: b32(), inbox };
 const c = b32(), blind = b32();
-await proveCall(owner, "createInbox", [inbox]);
+await proveCall(owner, "createInbox", [seed]);
 await proveCall(owner, "addMember", [inbox, P.memberCommitment(alice.sk)]);
 await proveCall(owner, "addMember", [inbox, P.memberCommitment(bob.sk)]);
 await proveCall({ ...alice, blind }, "postEnvelope", [inbox, c]);

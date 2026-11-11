@@ -50,7 +50,33 @@ test("contract mirrors equal SHA-256 over the Compact encodings", async () => {
   assert.equal(E.toHex(await E.memberCommitment(sk)), "b060a1af05f507dec3301c7f90fa373c8de6839f64285d02afcca9762b0a267a");
   const c = new Uint8Array(32).fill(1), m = new Uint8Array(32).fill(2), bl = new Uint8Array(32).fill(3);
   assert.deepEqual(await E.authorTag(c, m, bl), sha(E.pad32("nm:author:v1"), c, m, bl));
-  assert.deepEqual(await E.dmInboxId(m, c), await E.dmInboxId(c, m));
+  assert.deepEqual(await E.inboxIdFor(m, c), sha(E.pad32("nm:inbox:v1"), m, c));
+  assert.deepEqual(await E.memberLeaf(c, E.INITIAL_EPOCH, m), sha(E.pad32("nm:leaf:v2"), c, E.INITIAL_EPOCH, m));
+});
+
+test("DM inbox ids come from the X25519 shared secret: both parties agree, an outsider cannot derive them", async () => {
+  const a = await E.createIdentity("A"), b = await E.createIdentity("B"), m = await E.createIdentity("Mallory");
+  const [A, B] = [await E.publicIdentity(a), await E.publicIdentity(b)];
+  const ab = await E.dmInboxes(a, B), ba = await E.dmInboxes(b, A);
+  assert.deepEqual(ab.seed, ba.seed);
+  assert.deepEqual(ab.mine, ba.theirs);
+  assert.deepEqual(ab.theirs, ba.mine);
+  // the old public-only derivation is gone: knowing both invites is not enough
+  const mb = await E.dmInboxes(m, B), ma = await E.dmInboxes(m, A);
+  for (const x of [mb.seed, ma.seed]) assert.notDeepEqual(x, ab.seed);
+  for (const x of [mb.mine, mb.theirs, ma.mine, ma.theirs]) {
+    assert.notDeepEqual(x, ab.mine);
+    assert.notDeepEqual(x, ab.theirs);
+  }
+});
+
+test("open() can refuse a payload that names an unexpected inbox", async () => {
+  const a = await E.createIdentity("A"), b = await E.createIdentity("B");
+  const ok = await E.seal(a, await E.publicIdentity(b), "hi");
+  const exp = await E.dmInboxes(b, await E.publicIdentity(a));
+  assert.equal((await E.open(b, ok.envelope, { expectedInboxes: [exp.mine, exp.theirs] })).payload.body, "hi");
+  const bad = await E.seal(a, await E.publicIdentity(b), "hi", { inbox: new Uint8Array(32).fill(9) });
+  await assert.rejects(E.open(b, bad.envelope, { expectedInboxes: [exp.mine, exp.theirs] }), /unexpected inbox/);
 });
 
 test("author disclosure: a third party can verify who wrote one message; a wrong member fails", async () => {
