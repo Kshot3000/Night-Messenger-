@@ -1,0 +1,26 @@
+# Optional local Preprod indexer. Not for production or mainnet.
+# Prefer ./start.sh, which also handles daemons that cannot publish ports.
+services:
+  indexer:
+    image: ${INDEXER_IMAGE:-midnightntwrk/indexer-standalone:4.4.101}
+    container_name: ${INDEXER_NAME:-midnight-indexer-preprod}
+    user: "10001:10001"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${INDEXER_PORT:-8088}:8088"
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      APP__APPLICATION__NETWORK_ID: ${NETWORK_ID:-preprod}
+      APP__INFRA__NODE__URL: ${NODE_WS:-wss://rpc.preprod.midnight.network}
+      APP__INFRA__SPO_NODE__URL: ${NODE_WS:-wss://rpc.preprod.midnight.network}
+      APP__INFRA__SECRET_FILE: /data/infra.secret
+      APP__INFRA__SPO_NODE__BLOCKFROST_ID: dummy-not-using-spo
+      APP__INFRA__STORAGE__CNN_URL: /data/indexer.sqlite
+      APP__INFRA__LEDGER_DB__CNN_URL: /data/ledger-db.sqlite
+      APP__INFRA__NODE__RECONNECT_MAX_ATTEMPTS: "1000000"
+      APP__INFRA__NODE__RECONNECT_MAX_DELAY: 30s
+      APP__INFRA__NODE__SUBSCRIPTION_RECOVERY_TIMEOUT: 120s
+      APP__INFRA__API__ADDRESS: 0.0.0.0
+      APP__INFRA__API__PORT: "8088"
+      RUST_LOG: indexer_standalone=info,chain_indexer=info,indexer_api=info,wallet_indexer=info,indexer_common=info,midnight_ledger=warn,info

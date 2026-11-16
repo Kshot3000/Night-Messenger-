@@ -12,7 +12,8 @@
     "demo": "pnpm run compile:fast && node --experimental-strip-types --no-warnings scripts/e2e-demo.mjs",
     "sim": "node --no-warnings sim/server.mjs",
     "stats": "node --no-warnings scripts/stats.mjs",
-    "preprod": "node --experimental-strip-types --no-warnings preprod/night-messenger-preprod.mjs"
+    "preprod": "node --experimental-strip-types --no-warnings preprod/night-messenger-preprod.mjs",
+    "preprod:wallet": "node --experimental-strip-types --no-warnings preprod/generate-preprod-wallet.mjs"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.21.0",

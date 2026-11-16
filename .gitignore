@@ -26,3 +26,7 @@ apps/relay/data/
 !.env.example
 secrets/
 *.seed
+
+# Self-hosted indexer data and generated secrets (scripts/local-indexer)
+scripts/local-indexer/data/
+scripts/local-indexer/.env
