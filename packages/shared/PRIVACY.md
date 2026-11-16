@@ -19,7 +19,7 @@ The original mobile starter and shared mock API are prototypes. Their mock messa
 | Encrypted transport | X25519 + HKDF-SHA-256 + AES-256-GCM (WebCrypto), Noise-X style sealed envelopes; sender key hidden from the relay; ciphertext-only relay (`apps/relay`) | Working |
 | Keys at rest | Identity sealed with a non-extractable AES-GCM device key in IndexedDB; passphrase backup (PBKDF2-SHA-256, 600k) | Working |
 | Commitments | SHA-256 of each envelope posted with `postEnvelope`; anonymous membership proof | Real Compact circuits + real ZK proofs locally; Preprod deploy pending |
-| Delivery receipts | `ackDelivery` nullifier, one per member per message, public count at `/verify` | Same as above |
+| Delivery receipts (in testing, unaudited) | `ackDelivery` nullifier, one per member per message, public count at `/verify`. Outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. | Same as above |
 | Selective disclosure | Hiding author tag; recipient verifies sender; opt-in per-message authorship bundle; `revealAuthor` | Same as above |
 | Identity and recovery | Single device; manual backup file | No multi-device sync |
 

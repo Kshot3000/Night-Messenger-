@@ -75,7 +75,7 @@ try {
   say("bob", `on-chain author tag ${ok ? "MATCHES" : "DOES NOT MATCH"}: the anonymous post was made by Alice's member key`);
   if (!ok) throw new Error("author tag mismatch");
 
-  // 5. Bob acknowledges delivery anonymously; anyone can count receipts.
+  // 5. Bob acknowledges delivery; outsiders can't tell who, but in this 1:1 Alice knows it was Bob.
   state = await call(state, { sk: bob.chainSecret, inbox }, "ackDelivery", opened.commitment);
   say("chain", `delivery receipts for ${short(opened.commitment)}: ${ledger(state).ackCount.lookup(opened.commitment)}`);
 

@@ -107,7 +107,7 @@ export default function SecurityPage() {
               {
                 icon: "eye" as const,
                 title: "Selective disclosure",
-                body: "Working: anonymous delivery receipts anyone can count at /verify, and an opt-in bundle that proves who wrote one message without opening any other.",
+                body: "Working (in testing, unaudited): delivery receipts you can count at /verify. Outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. Either side can later prove who wrote one message without opening any other.",
               },
             ].map((item) => (
               <article key={item.title}>

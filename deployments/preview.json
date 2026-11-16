@@ -1,0 +1,25 @@
+{
+  "network": "midnight-preview",
+  "status": "not-deployed",
+  "reason": "The test wallet is unfunded. Request tNIGHT from the Preview faucet in a browser (Cloudflare Turnstile captcha; there is no key-free API), register that tNIGHT for DUST, then re-run the deploy command below. Preview can reset: Midnight relaunched it as a new chain on 7 November 2026, wiping contracts, balances and history. Treat Preview deploys as disposable. The Wave 3 entry stays on Preprod.",
+  "contract": "contracts/src/night_messenger.compact",
+  "compiler": "compactc 0.36.0",
+  "language": "0.28.0",
+  "runtime": "compact-runtime 0.21.0, midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0",
+  "contractAddress": null,
+  "deployerAddress": "mn_addr_preview1v9auk0rkac0cq82x6sp6ya8vpxeqqk58fas28fq4jupyy5qax86seu88yw",
+  "deployScript": "contracts/preprod/night-messenger-preprod.mjs",
+  "networkSwitch": "MIDNIGHT_NETWORK=preview",
+  "token": "tNIGHT",
+  "endpoints": {
+    "indexer": "https://indexer.preview.midnight.network/api/v4/graphql",
+    "indexerWS": "wss://indexer.preview.midnight.network/api/v4/graphql/ws",
+    "node": "https://rpc.preview.midnight.network",
+    "nodeWS": "wss://rpc.preview.midnight.network",
+    "proofServer": "http://127.0.0.1:6300",
+    "faucet": "https://midnight-tmnight-preview.nethermind.dev/",
+    "faucetAlias": "https://faucet.preview.midnight.network/",
+    "explorer": "https://preview.midnightexplorer.com"
+  },
+  "deployCommand": "set -a && source /workspace/secrets/night-messenger-preprod.env && set +a && mkdir -p /workspace/secrets/night-messenger-preview && chmod 700 /workspace/secrets/night-messenger-preview && MIDNIGHT_NETWORK=preview NM_OUT=contracts/src/managed/night_messenger NM_SECRETS=/workspace/secrets/night-messenger-preview NM_PUBLIC_RECORD=deployments/preview.json pnpm --filter @midnight-messenger/contracts preprod"
+}

@@ -16,7 +16,7 @@ const faqs = [
   ],
   [
     "What is selective disclosure?",
-    "Proving one fact without revealing the rest. In Night Messenger a sender proves they are a member of the conversation without saying which member, a recipient posts a delivery receipt without saying who they are, and either side can later prove who wrote one specific message. The Compact contract and its zero-knowledge proofs run today against a local proof server; the Preprod deployment is next.",
+    "Proving one fact without revealing the rest. In Night Messenger a sender proves they are a member of the conversation without saying which member, and either side can later prove who wrote one specific message. Read receipts are in testing and unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. The Compact contract and its zero-knowledge proofs run today against a local proof server; a Preview or Preprod deployment is next.",
   ],
   [
     "What happens to my demo conversations?",
@@ -244,8 +244,9 @@ export default function LandingPage() {
               <p>
                 <strong>Verified, but anonymous.</strong> Private chat now
                 encrypts end to end, delivers through a ciphertext-only relay
-                and records checkable receipts. Midnight Preprod deployment is
-                next; testnet only, not audited.
+                and records delivery receipts (in testing, unaudited: in a 1:1
+                chat the sender knows who acknowledged). A Preview or Preprod
+                deployment is next; testnet only, not audited.
               </p>
               <Link href="/security">
                 See what’s ready <Icon name="arrowUp" size={14} />

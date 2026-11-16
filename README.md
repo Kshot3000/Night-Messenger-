@@ -1,11 +1,11 @@
 # Night Messenger
 
-**Verified, but anonymous. Private messages with delivery receipts anyone can check.**
+**Verified, but anonymous. Read receipts (in testing, unaudited): outsiders can't tell who acknowledged a message, but in a 1:1 chat the sender knows it was the other person.**
 
 Night Messenger is an open-source messenger for the [Midnight](https://midnight.network) blockchain, built by **Kshot Applications**.
 
 - **Verified but anonymous senders.** A sender proves in zero knowledge that they are a registered member of a conversation (for example, verified staff writing to a tip line) without revealing which member.
-- **Delivery receipts anyone can check.** The recipient posts an anonymous delivery receipt (`ackDelivery`) against the message's on-chain commitment. Anyone can look a commitment up at `/verify` and see that a member posted it and how many members acknowledged it, without seeing the message, the sender or the recipient.
+- **Read receipts (in testing, unaudited).** The recipient posts a delivery receipt (`ackDelivery`) against the message's on-chain commitment. Outsiders can't tell who acknowledged a message, but in a 1:1 chat the sender knows it was the other person. Anyone can look a commitment up at `/verify` and see that a member posted it and how many members acknowledged it, without seeing the message.
 - **Real end-to-end encryption in the browser.** Keys are made on your device; the relay only ever stores ciphertext.
 
 > ⚠️ **Testnet only. Not audited.** The contract and encryption code have not had a security review. Use test identities and sample content only.
@@ -31,7 +31,7 @@ The product name lives in one constant, `PRODUCT.name` in `packages/shared/src/p
 1. **Make keys.** Your browser generates an X25519 key pair and a separate 32-byte Midnight member secret. You share an invite code (public keys only) with your contact.
 2. **Write.** Your browser seals the message for the recipient. Only the 32-byte commitment of the ciphertext goes on-chain, via `postEnvelope`, with a ZK proof that you hold a member leaf of the conversation's inbox. The proof does not say which leaf.
 3. **Deliver.** A small relay stores the sealed envelope in the recipient's mailbox. It can't read it and can't see who sent it.
-4. **Confirm.** The recipient decrypts, checks the sender's key against the invite, checks the on-chain author tag, and posts `ackDelivery`: an anonymous one-per-member receipt. Anyone can count receipts at `/verify`.
+4. **Confirm.** The recipient decrypts, checks the sender's key against the invite, checks the on-chain author tag, and posts `ackDelivery`: a one-per-member receipt (in testing, unaudited). Outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. `/verify` shows the receipt count.
 
 ```mermaid
 sequenceDiagram
@@ -155,11 +155,11 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 | Membership proof | On-chain | Everyone can verify "a member of inbox X posted this", not which member |
 | Member leaves | On-chain | Everyone sees salted hashes; not reversible to members |
 | Author tag | On-chain | Hiding; only someone given `(member, blind)` can check it |
-| Delivery receipt nullifier | On-chain | Everyone; unlinkable to a member without their secret |
+| Delivery receipt nullifier | On-chain | Everyone; not tied to a named member. In a 1:1 chat the sender can infer it was the other person. In testing, unaudited. |
 | Public encryption key, member commitment | Invite code you choose to share | Your contacts (not on-chain) |
 | Secret keys | Your browser only | Only you |
 
-**Does `postEnvelope` or `ackDelivery` reveal the recipient on-chain?** No. Neither circuit takes or discloses the recipient's key, mailbox or member commitment. `postEnvelope` discloses the inbox id (for a DM, a hash of both member commitments, so it links messages of the same conversation but names nobody), and `ackDelivery` discloses only the commitment and a one-time nullifier. Caveat: in a two-person DM the anonymity set is two, so "a member other than the sender acknowledged" effectively means "the other party", pseudonymously.
+**Does `postEnvelope` or `ackDelivery` reveal the recipient on-chain?** In testing, unaudited. Neither circuit takes or discloses the recipient's key, mailbox or member commitment. `postEnvelope` discloses the inbox id (for a DM, a hash of both member commitments, so it links messages of the same conversation but names nobody), and `ackDelivery` discloses only the commitment and a one-time nullifier. Caveat: in a 1:1 chat the sender knows it was the other person, because the anonymity set is two and the author cannot ack their own message.
 
 **Known limits:**
 
@@ -179,9 +179,17 @@ Not deployed yet. **Contract address: none.** The contract and deploy script are
 
 When it runs, `deployments/preprod.json` records the address and `https://preprod.midnightexplorer.com/contracts/0x…` links.
 
+## Preview status
+
+Not deployed yet. Preview already runs ledger 9, and Midnight still hosts its Preview indexer and RPC (no Blockfrost token). That is a way to prove the deploy path while a Preprod project id is pending. The Wave 3 entry stays on Preprod.
+
+**Preview can reset.** Midnight relaunched Preview as a new chain on 7 November 2026, wiping contracts, balances and history from the old chain. Treat anything deployed there as disposable, and be ready to fund, register DUST and redeploy again if it happens. See [Networks and environments](https://docs.midnight.network/guides/networks-and-environments) and [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9).
+
+To deploy once the test wallet has tNIGHT from the [Preview faucet](https://midnight-tmnight-preview.nethermind.dev/) (browser captcha; the token is tNIGHT, also written tNight on the faucet page): see [`deployments/preview.json`](deployments/preview.json).
+
 ## Testnet and audit status
 
-- Local demo and (soon) Midnight Preprod only. No mainnet deployment.
+- Local demo, optional Midnight Preview, and (planned) Midnight Preprod only. No mainnet deployment.
 - **Not audited.** Treat every privacy property here as a design goal under test.
 - Report security issues privately through GitHub Security Advisories on this repo, not in public issues.
 
@@ -196,7 +204,7 @@ Several teams are building private messaging on Midnight, which is good for ever
 
 | Project | Public description | Where Night Messenger differs |
 | --- | --- | --- |
-| **Midnight Messenger** ([@EnigmA_SPO](https://x.com/EnigmA_SPO)) | Preprod beta; MLS end-to-end encryption, sponsor-paid signup, username plus 6-digit code over a hashed directory, ciphertext-only relay | Recipient-posted delivery receipts anyone can check on-chain, and per-message authorship disclosure |
+| **Midnight Messenger** ([@EnigmA_SPO](https://x.com/EnigmA_SPO)) | Preprod beta; MLS end-to-end encryption, sponsor-paid signup, username plus 6-digit code over a hashed directory, ciphertext-only relay | Recipient-posted read receipts (in testing, unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows), and per-message authorship disclosure |
 | **Vale** | Wallet-based identity and private discovery; chat off-chain | On-chain checkable receipts |
 | **ZK-Chat** | Encrypted chat with ZK proofs of sender authenticity | Recipient-posted receipts |
 | **ZKMail** | Developer framework for confidential, ZK-verified messaging | End-user app built around checkable receipts |
@@ -215,7 +223,7 @@ Several teams are building private messaging on Midnight, which is good for ever
 
 **Now:**
 
-- Compact contract with anonymous membership posting, author tags, anonymous one-per-member delivery receipts, opt-in author reveal, member removal and usage counters; simulator tests for every circuit.
+- Compact contract with anonymous membership posting, author tags, one-per-member delivery receipts (in testing, unaudited; in a 1:1 chat the sender knows who acknowledged), opt-in author reveal, member removal and usage counters; simulator tests for every circuit.
 - Real ZK proofs for every circuit against proof server 9.0.0.
 - In-browser E2EE with keys sealed at rest (folding in the useful parts of the earlier [Nocturne](https://github.com/Kshot3000/nocturne) preview: device-key sealing and passphrase wrapping).
 - Ciphertext-only relay, local chain simulator, `/private` and `/verify` pages, terminal demo.

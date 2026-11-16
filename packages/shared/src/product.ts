@@ -6,7 +6,7 @@ export const PRODUCT = {
   legalName: 'Night Messenger',
   tagline: 'Verified but anonymous messaging on Midnight',
   oneLiner:
-    'End-to-end encrypted DMs where the sender proves they are a registered member without revealing who, and delivery receipts anyone can check on Midnight.',
+    "End-to-end encrypted DMs where the sender proves they are a registered member without revealing who. Read receipts are in testing and unaudited: outsiders can't tell who acknowledged a message, but in a 1:1 chat the sender knows it was the other person.",
   repoUrl: 'https://github.com/Kshot3000/Night-Messenger-',
   twitter: '@kshot9000',
   freeAndOpen: true as const,

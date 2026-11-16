@@ -375,7 +375,8 @@ function Setup({ error, onReady }: { error: string; onReady: (id: Identity) => P
         <p className="pm-muted">
           Your keys are made in this browser and sealed with a device key that can&apos;t be exported. Messages are end-to-end
           encrypted; the relay only stores ciphertext. On Midnight you prove you&apos;re a member of the conversation without
-          saying which member, and anyone can check delivery receipts.
+          saying which member. Read receipts are in testing and unaudited: outsiders can&apos;t tell who acknowledged a
+          message, but in a 1:1 chat the sender knows it was the other person.
         </p>
         <form className="pm-stack" onSubmit={async (e) => { e.preventDefault(); setBusy(true); setErr(""); try { await onReady(await createIdentity(name)); } catch (x) { setErr((x as Error).message); } finally { setBusy(false); } }}>
           <label className="pm-label">Display name (only your contacts see it)

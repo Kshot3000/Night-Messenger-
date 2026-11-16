@@ -3,7 +3,7 @@ import { PrivateMessenger } from "@/components/PrivateMessenger";
 
 export const metadata: Metadata = {
   title: "Private chat",
-  description: "End-to-end encrypted messages with anonymous membership proofs and checkable delivery receipts on Midnight.",
+  description: "End-to-end encrypted messages with anonymous membership proofs and read receipts (in testing, unaudited) on Midnight.",
 };
 
 export default function PrivatePage() {

@@ -34,6 +34,9 @@
  * included, because the leaf itself is recomputed with the new epoch), and
  * the owner re-adds the remaining members under the new epoch. Freed slots are
  * not reused; each re-add consumes one of the inbox's 32,768 slots.
+ * removeMember also sets the on-chain member count (`InboxRecord.members`) to
+ * 0, so a revocation is publicly visible (the count drops; the removed
+ * member's identity is still not listed).
  *
  * Posting (sender privacy). postEnvelope proves "I hold the sk behind some leaf
  * of this inbox" with a Merkle path against a current or recent root. The
@@ -49,11 +52,13 @@
  * secret. Either party can later hand (m, blind) to a third party to prove
  * authorship of one message, or the sender can publish it with revealAuthor.
  *
- * Delivery receipts. ackDelivery proves membership of the post's inbox and
- * records ackNullifier = persistentHash("nm:ack:v1" || commitment || sk), so a
- * member can acknowledge a message once, without saying who they are.
- * postEnvelope inserts the sender's own nullifier up front, so a receipt
- * always comes from a member other than the author (no self-receipts).
+ * Delivery receipts (in testing, unaudited). ackDelivery proves membership of
+ * the post's inbox and records ackNullifier = persistentHash("nm:ack:v1" ||
+ * commitment || sk), so a member can acknowledge a message once without
+ * naming who they are. Outsiders cannot tell who acknowledged, but in a 1:1
+ * chat the sender knows it was the other person. postEnvelope inserts the
+ * sender's own nullifier up front, so a receipt always comes from a member
+ * other than the author (no self-receipts).
  *
  * Status: compiles with Compact toolchain 0.36.0 (compactc 0.36.0, language 0.28.0,
  * compact-runtime 0.21.0). Not audited. Testnet only.
@@ -234,7 +239,8 @@ export circuit postEnvelope(inboxId: Bytes<32>, commitment: Bytes<32>): [] {
   acks.insert(disclose(ackNullifier(c, localSecretKey())));
 }
 
-/* A member of the post's inbox acknowledges it once, anonymously. */
+/* A member of the post's inbox acknowledges it once, without naming who.
+ * In a 1:1 chat the sender can infer it was the other person. */
 export circuit ackDelivery(commitment: Bytes<32>): [] {
   const c = disclose(commitment);
   assert(posts.member(c), "unknown message");

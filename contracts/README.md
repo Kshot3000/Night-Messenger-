@@ -2,7 +2,7 @@
 
 `src/night_messenger.compact` (Compact toolchain **0.36.0**, `pragma language_version >= 0.28`). Apache-2.0.
 
-Private group inboxes on Midnight: salted member leaves in a per-inbox `HistoricMerkleTree<15, Bytes<32>>` (depth 15 is required: compactc 0.36.x crashes on other depths inside a Map, LFDT-Minokawa/compact #879), anonymous `postEnvelope` with a hiding author tag, anonymous one-per-member `ackDelivery` receipts, opt-in `revealAuthor`, `removeMember` with epoch rotation, `closeInbox`, and aggregate usage counters. Message bodies, keys and identities never touch the ledger. See the root README for the full table of what is public.
+Private group inboxes on Midnight: salted member leaves in a per-inbox `HistoricMerkleTree<15, Bytes<32>>` (depth 15 is required: compactc 0.36.x crashes on other depths inside a Map, LFDT-Minokawa/compact #879), anonymous `postEnvelope` with a hiding author tag, one-per-member `ackDelivery` receipts (in testing, unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows), opt-in `revealAuthor`, `removeMember` with epoch rotation (the on-chain member count drops to 0, so revocations are publicly visible), `closeInbox`, and aggregate usage counters. Message bodies, keys and identities never touch the ledger. See the root README for the full table of what is public.
 
 ```bash
 pnpm compile         # full build with proving keys -> src/managed/night_messenger (git-ignored)
@@ -16,6 +16,6 @@ pnpm stats -- --sim http://localhost:8788      # usage counters (or --contract <
 
 The pure helpers (`memberCommitment`, `memberLeaf`, `authorTag`, `ackNullifier`) are SHA-256 over the concatenated 32-byte fields, which is exactly what `persistentHash<Vector<n, Bytes<32>>>` computes; `packages/shared/src/e2ee.ts` mirrors them and a test checks they match.
 
-Preprod: `preprod/night-messenger-preprod.mjs` deploys and runs a drill against ledger 9. Not run yet: it needs a funded Preprod wallet (tNIGHT + DUST re-registration) and a Blockfrost Midnight Preprod project id. Midnight's hosted Preprod indexer/RPC were retired on 9 October 2026.
+Preview or Preprod: `preprod/night-messenger-preprod.mjs` deploys and runs a drill against ledger 9. Set `MIDNIGHT_NETWORK=preview` to use Midnight's hosted Preview indexer and RPC (no token). Preview can reset: Midnight wiped that chain on 7 November 2026. Preprod still needs a funded wallet (tNIGHT + DUST re-registration) and a Blockfrost Midnight Preprod project id. Midnight's hosted Preprod indexer/RPC were retired on 9 October 2026. The Wave 3 entry stays on Preprod.
 
 Not audited. Testnet only.

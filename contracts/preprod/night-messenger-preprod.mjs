@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Night Messenger on Midnight Preprod (ledger 9): deploy once, then a live drill
+ * Night Messenger on Midnight Preview or Preprod (ledger 9): deploy once, then a live drill
  *   deploy -> createInbox -> addMember(alice) -> addMember(bob)
  *   -> postEnvelope(alice, commitment of a real sealed envelope)
  *   -> ackDelivery(bob) -> read the ledger back and verify the author tag.
@@ -10,13 +10,15 @@
  * Compact toolchain 0.36.0 (language 0.28.0, compact-runtime 0.21.0).
  *
  * Needs (env):
+ *   MIDNIGHT_NETWORK=preview|preprod (default preprod),
  *   MIDNIGHT_WALLET_SEED (hex) or MIDNIGHT_WALLET_MNEMONIC (never printed),
- *   BLOCKFROST_MIDNIGHT_PREPROD_ID or BLOCKFROST_PROJECT_ID (a Blockfrost
- *     "Midnight Preprod" project id). Midnight retired its hosted Preprod
- *     indexer and RPC on 9 October 2026 (indexer returns HTTP 410);
+ *   On Preprod: BLOCKFROST_MIDNIGHT_PREPROD_ID or BLOCKFROST_PROJECT_ID (a
+ *     Blockfrost "Midnight Preprod" project id). Midnight retired its hosted
+ *     Preprod indexer and RPC on 9 October 2026 (indexer returns HTTP 410);
  *     Blockfrost is the public Preprod provider and every request needs a
- *     project token. Or set MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL,
- *     MIDNIGHT_NODE and MIDNIGHT_NODE_WS yourself.
+ *     project token. Preview uses Midnight-hosted indexer/RPC and needs no token.
+ *     Or set MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL, MIDNIGHT_NODE and
+ *     MIDNIGHT_NODE_WS yourself.
  *   PRIVATE_STATE_PASSWORD, NM_SECRETS (dir for demo member secrets, 0700),
  *   NM_OUT (compiled managed/night_messenger with keys/).
  *   A local proof server 9.0.0 (default http://127.0.0.1:6300).
@@ -25,11 +27,13 @@
  * that were not backed by cNIGHT, so this script re-registers any unregistered
  * tNIGHT UTXOs with registerNightUtxosForDustGeneration. Wallet SDK 2.0.0 can
  * throw ProtocolVersionMismatchError on the first registration call; we retry
- * that error (midnight-examples#93 / PR #111).
+ * that error (midnight-examples#93 / PR #111). Preview relaunched as a new
+ * chain on 7 November 2026 and can reset again; treat Preview deploys as
+ * disposable. The Wave 3 entry stays on Preprod.
  *
  * This script does not sign up for Blockfrost, does not send email, and does
  * not touch mainnet. Public results (no secrets) go to NM_PUBLIC_RECORD
- * (deployments/preprod.json).
+ * (deployments/preprod.json or deployments/preview.json).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -51,7 +55,24 @@ import * as Rx from "rxjs";
 
 const COMPILER = "compactc 0.36.0";
 const RUNTIME = "compact-runtime 0.21.0, midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0";
-const FAUCET = "https://midnight-tmnight-preprod.nethermind.dev/";
+const NETWORK = (process.env.MIDNIGHT_NETWORK ?? "preprod").trim().toLowerCase();
+const FAUCETS = {
+  preprod: "https://midnight-tmnight-preprod.nethermind.dev/",
+  preview: "https://midnight-tmnight-preview.nethermind.dev/",
+};
+const EXPLORERS = {
+  preprod: "https://preprod.midnightexplorer.com",
+  preview: "https://preview.midnightexplorer.com",
+};
+const WALLET_NETWORK_IDS = {
+  preprod: NetworkId.NetworkId.PreProd,
+  preview: NetworkId.NetworkId.Preview,
+};
+if (!FAUCETS[NETWORK]) {
+  throw new Error("MIDNIGHT_NETWORK must be preview or preprod");
+}
+const FAUCET = FAUCETS[NETWORK];
+const EXPLORER = EXPLORERS[NETWORK];
 const TX_TTL_SECONDS = Number(process.env.MIDNIGHT_TX_TTL_SECONDS ?? 3600);
 const DUST_REGISTRATION_RETRY_ATTEMPTS = 5;
 const DUST_REGISTRATION_RETRY_DELAY_MS = 2_000;
@@ -89,15 +110,28 @@ function parseSeedHex(value) {
   return new Uint8Array(Buffer.from(h, "hex"));
 }
 
-function preprodEndpoints() {
+function resolveEndpoints() {
   if (process.env.MIDNIGHT_INDEXER_URL && process.env.MIDNIGHT_INDEXER_WS_URL && process.env.MIDNIGHT_NODE && process.env.MIDNIGHT_NODE_WS) {
     return {
-      networkId: "preprod",
-      walletNetworkId: NetworkId.NetworkId.PreProd,
+      networkId: NETWORK,
+      walletNetworkId: WALLET_NETWORK_IDS[NETWORK],
       indexer: process.env.MIDNIGHT_INDEXER_URL,
       indexerWS: process.env.MIDNIGHT_INDEXER_WS_URL,
       node: process.env.MIDNIGHT_NODE,
       nodeWS: process.env.MIDNIGHT_NODE_WS,
+      proofServer: PROOF,
+      faucet: FAUCET,
+    };
+  }
+  if (NETWORK === "preview") {
+    const net = networks.preview();
+    return {
+      networkId: "preview",
+      walletNetworkId: NetworkId.NetworkId.Preview,
+      indexer: net.indexer.queryURL,
+      indexerWS: net.indexer.subscriptionURL,
+      node: net.nodeURL ?? "https://rpc.preview.midnight.network",
+      nodeWS: net.nodeWsURL ?? "wss://rpc.preview.midnight.network",
       proofServer: PROOF,
       faucet: FAUCET,
     };
@@ -107,7 +141,8 @@ function preprodEndpoints() {
       "Preprod indexer/RPC require a Blockfrost Midnight Preprod project id. " +
         "Midnight retired indexer.preprod.midnight.network and rpc.preprod.midnight.network on 9 October 2026 " +
         "(the indexer returns HTTP 410). Set BLOCKFROST_MIDNIGHT_PREPROD_ID or BLOCKFROST_PROJECT_ID, " +
-        "or set MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL, MIDNIGHT_NODE and MIDNIGHT_NODE_WS. " +
+        "or set MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL, MIDNIGHT_NODE and MIDNIGHT_NODE_WS, " +
+        "or set MIDNIGHT_NETWORK=preview to use Midnight's hosted Preview endpoints (no token). " +
         `tNIGHT faucet (captcha in a browser): ${FAUCET}`,
     );
   }
@@ -234,7 +269,7 @@ async function main() {
 
   let env;
   try {
-    env = preprodEndpoints();
+    env = resolveEndpoints();
   } catch (e) {
     if (DRY) {
       log(`dry run: ${run.contractAddress ? `contract ${run.contractAddress}` : "would deploy"}; ${redact(e)}; no wallet, no txs`);
@@ -266,7 +301,7 @@ async function main() {
   const address = rawAddr?.asString?.() ?? String(rawAddr ?? "");
   try {
     await wallet.start(seeds);
-    log(`syncing wallet as ${address || "(address pending)"} (Preprod dust sync can take a while)…`);
+    log(`syncing wallet as ${address || "(address pending)"} (${NETWORK} dust sync can take a while)…`);
     try {
       await syncWallet(wallet, 5_000, 3_600_000);
     } catch (e) {
@@ -287,7 +322,7 @@ async function main() {
     const nightBal = nightState.unshielded.balances?.[night] ?? 0n;
     if (nightBal <= 0n) {
       throw new Error(
-        `No tNIGHT at ${address}. Request it from the free Preprod faucet in a browser (${FAUCET}), then re-run. ` +
+        `No tNIGHT at ${address}. Request it from the free ${NETWORK} faucet in a browser (${FAUCET}), then re-run. ` +
           "The faucet page uses a captcha; this script will not open it or sign up for anything.",
       );
     }
@@ -398,7 +433,7 @@ async function main() {
       acks: String(l.ackCount.lookup(u8(run.commitment))),
     };
     save();
-    if (!run.check.authorTagMatches) throw new Error("author tag on Preprod does not match");
+    if (!run.check.authorTagMatches) throw new Error(`author tag on ${NETWORK} does not match`);
     log("DRILL OK", JSON.stringify(run.check));
   } finally {
     await wallet.stop().catch(() => {});
@@ -407,20 +442,20 @@ async function main() {
 
 function publicRecord(run) {
   return {
-    network: "midnight-preprod",
+    network: `midnight-${NETWORK}`,
     status: run.contractAddress ? (run.check?.authorTagMatches ? "deployed-drill-passed" : "deployed") : "not-deployed",
     contract: "contracts/src/night_messenger.compact",
     compiler: COMPILER,
     language: "0.28.0",
     runtime: RUNTIME,
     contractAddress: run.contractAddress ?? null,
-    explorer: run.contractAddress ? `https://preprod.midnightexplorer.com/contracts/0x${run.contractAddress}` : null,
+    explorer: run.contractAddress ? `${EXPLORER}/contracts/0x${run.contractAddress}` : null,
     deployer: run.deployer ?? null,
     deployedAt: run.deployedAt ?? null,
     inboxId: run.inboxId ?? null,
     commitment: run.commitment ?? null,
     txs: Object.fromEntries(
-      Object.entries(run.txs ?? {}).map(([k, v]) => [k, { ...v, explorer: v?.txId ? `https://preprod.midnightexplorer.com/transactions/0x${v.txId}` : null }]),
+      Object.entries(run.txs ?? {}).map(([k, v]) => [k, { ...v, explorer: v?.txId ? `${EXPLORER}/transactions/0x${v.txId}` : null }]),
     ),
     check: run.check ?? null,
   };
