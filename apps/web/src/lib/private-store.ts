@@ -64,6 +64,42 @@ export function isRelayUrl(u: string): boolean {
   }
 }
 
+/** Strip a trailing slash; reject anything `isRelayUrl` would refuse. */
+export function parseRelayParam(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const u = raw.trim();
+  if (!u || !isRelayUrl(u)) return null;
+  return u.replace(/\/+$/, "") || null;
+}
+
+/** Localhost and Cloudflare quick-tunnel hosts change or are only useful on this machine. */
+export function isTransientRelay(u: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(u);
+    if (protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(hostname)) return true;
+    return hostname === "trycloudflare.com" || hostname.endsWith(".trycloudflare.com");
+  } catch {
+    return true;
+  }
+}
+
+/** Prefer a share-link `?relay=`, then a durable user-saved URL, then published `relay.json`. */
+export function resolveRelayUrl(options: {
+  query?: string | null;
+  stored?: string | null;
+  published?: string | null;
+  fallback: string;
+}): string {
+  const query = parseRelayParam(options.query);
+  if (query) return query;
+  const stored = parseRelayParam(options.stored);
+  const published = parseRelayParam(options.published);
+  if (stored && !isTransientRelay(stored)) return stored;
+  if (published) return published;
+  if (stored) return stored;
+  return options.fallback;
+}
+
 export function updateMessage(state: PrivateState, mailbox: string, commitment: string, patch: Partial<ChatMessage>): PrivateState {
   const list = state.threads[mailbox];
   if (!list) return state;

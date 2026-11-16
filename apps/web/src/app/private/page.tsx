@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PrivateMessenger } from "@/components/PrivateMessenger";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function PrivatePage() {
-  return <PrivateMessenger />;
+  return (
+    <Suspense fallback={<main className="pm-shell pm-center">Loading private chat…</main>}>
+      <PrivateMessenger />
+    </Suspense>
+  );
 }

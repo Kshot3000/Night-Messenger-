@@ -37,3 +37,6 @@ contracts/midnight-level-db/
 # ZK artifacts copied into the static site at Pages publish (prover keys are large)
 apps/web/public/zk/
 apps/web/src/generated/night_messenger/manifest-hash.ts
+
+# Ephemeral quick-tunnel URL written at Pages publish / update-pages-relay.sh
+apps/web/public/relay.json

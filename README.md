@@ -196,7 +196,7 @@ Deployed on Midnight Preview (ledger 9) as a disposable test. The Wave 3 entry s
 
 The hosted app is at [https://kshot3000.github.io/Night-Messenger-/](https://kshot3000.github.io/Night-Messenger-/). Open **Private chat**, create a local identity, connect the **Lace desktop extension** on the Midnight **Preview** network, and fund that wallet with tNIGHT / tDust from the Preview faucet. You can then create or join a DM inbox, post an envelope, and click **Acknowledge delivery** against the contract above. `/verify` decodes live Preview ledger state for any commitment (not only the drill below).
 
-Phones cannot connect Lace. A public ciphertext relay is not bundled with this Pages site; without a reachable relay the other person will not receive the message body, but the commitment can still be posted on-chain.
+Phones cannot connect Lace. Ciphertext delivery uses an interim relay exposed from the build box with a Cloudflare quick tunnel (no Cloudflare account). The published URL lives in [`relay.json`](https://kshot3000.github.io/Night-Messenger-/relay.json) and can be changed on `gh-pages` without a site rebuild (`scripts/update-pages-relay.sh`). You can also pass `?relay=https://…` on `/private`. After a box or tunnel restart, run `scripts/start-preview-relay-tunnel.sh` then `scripts/update-pages-relay.sh`. Quick-tunnel hostnames change each time, and the tunnel is not a production host.
 
 **Proof server — can a tester prove without running Docker?**
 

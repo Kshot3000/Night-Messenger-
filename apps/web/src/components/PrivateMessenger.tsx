@@ -2,6 +2,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   PRODUCT,
   backupIdentity,
@@ -23,7 +24,8 @@ import {
 import { Brand } from "./Brand";
 import { Icon } from "./Icon";
 import { ConnectWalletButton } from "./ConnectWalletButton";
-import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
+import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, parseRelayParam, resolveRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
+import { loadPublishedRelay } from "@/lib/relay-config";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
 import { CHAIN_KEY, DEFAULT_CHAIN, chainRisk, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
 import { decodePreviewReceipt, previewInboxExists, type PreviewDecodedReceipt } from "@/lib/preview-receipt";
@@ -56,6 +58,7 @@ export function PrivateMessenger() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [acking, setAcking] = useState<string | null>(null);
+  const searchParams = useSearchParams();
   const { session, api } = useWallet();
   const previewMode = session.status === "connected" && !!api;
   const keyRef = useRef<CryptoKey | null>(null);
@@ -67,7 +70,12 @@ export function PrivateMessenger() {
     (async () => {
       if (!globalThis.crypto?.subtle || !(await x25519Supported())) return setBoot("unsupported");
       try {
-        setRelay(localStorage.getItem(RELAY_KEY) || DEFAULT_RELAY);
+        const fromQuery = parseRelayParam(searchParams.get("relay"));
+        const stored = localStorage.getItem(RELAY_KEY);
+        const published = await loadPublishedRelay();
+        const chosen = resolveRelayUrl({ query: fromQuery, stored, published, fallback: DEFAULT_RELAY });
+        setRelay(chosen);
+        if (fromQuery) localStorage.setItem(RELAY_KEY, fromQuery);
         setChain(localStorage.getItem(CHAIN_KEY) || DEFAULT_CHAIN);
         const key = await deviceKey();
         keyRef.current = key;
@@ -565,7 +573,9 @@ function Settings({ relay, chain, onRelay, onChain, onNotice }: { relay: string;
       }}>
         <label className="pm-label pm-small">Relay (ciphertext only)<input className="pm-input pm-mono" value={r} onChange={(e) => setR(e.target.value)} /></label>
         <label className="pm-label pm-small">Chain simulator (used only when Lace is not connected)<input className="pm-input pm-mono" value={c} onChange={(e) => setC(e.target.value)} /></label>
-        <p className="pm-muted pm-small">A public relay is still required for the other person to receive ciphertext. This site does not host one; set a reachable relay, or both testers can use a local relay.</p>
+        <p className="pm-muted pm-small">
+          Ciphertext delivery uses the relay in the address bar (<span className="pm-mono">?relay=https://…</span>), or the published <span className="pm-mono">relay.json</span> on this site, unless you save a different https URL here.
+        </p>
         <button className="button button-outline button-small">Save</button>
       </form>
     </details>
