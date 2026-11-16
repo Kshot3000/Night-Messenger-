@@ -159,7 +159,7 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 | Public encryption key, member commitment | Invite code you choose to share | Your contacts (not on-chain) |
 | Secret keys | Your browser only | Only you |
 
-**Does `postEnvelope` or `ackDelivery` reveal the recipient on-chain?** In testing, unaudited. Neither circuit takes or discloses the recipient's key, mailbox or member commitment. `postEnvelope` discloses the inbox id (for a DM, a hash of both member commitments, so it links messages of the same conversation but names nobody), and `ackDelivery` discloses only the commitment and a one-time nullifier. Caveat: in a 1:1 chat the sender knows it was the other person, because the anonymity set is two and the author cannot ack their own message.
+**Does `postEnvelope` or `ackDelivery` reveal the recipient on-chain?** In testing, unaudited. Neither circuit takes or discloses the recipient's key, mailbox or member commitment. `postEnvelope` discloses the inbox id (for a DM, derived from the creator's commitment plus a seed from the X25519 shared secret, so outsiders can't compute it), and `ackDelivery` discloses only the commitment and a one-time nullifier. Caveat: in a 1:1 chat the sender knows it was the other person, because the anonymity set is two and the author cannot ack their own message.
 
 **Known limits:**
 
@@ -200,14 +200,7 @@ To deploy once the test wallet has tNIGHT from the [Preview faucet](https://midn
 
 ## Related work
 
-Several teams are building private messaging on Midnight, which is good for everyone. Summaries below come from each project's public posts (Nov 2026) and are not claims about what they can or can't do; open an issue if we got something wrong.
-
-| Project | Public description | Where Night Messenger differs |
-| --- | --- | --- |
-| **Midnight Messenger** ([@EnigmA_SPO](https://x.com/EnigmA_SPO)) | Preprod beta; MLS end-to-end encryption, sponsor-paid signup, username plus 6-digit code over a hashed directory, ciphertext-only relay | Recipient-posted read receipts (in testing, unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows), and per-message authorship disclosure |
-| **Vale** | Wallet-based identity and private discovery; chat off-chain | On-chain checkable receipts |
-| **ZK-Chat** | Encrypted chat with ZK proofs of sender authenticity | Recipient-posted receipts |
-| **ZKMail** | Developer framework for confidential, ZK-verified messaging | End-user app built around checkable receipts |
+Several teams are building private messaging on Midnight, and we think that's good for everyone. What Night Messenger focuses on is the delivery receipt: the recipient posts an on-chain receipt (`ackDelivery`) that anyone can look up on the `/verify` page (in testing, unaudited). Outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person.
 
 ## Roadmap
 

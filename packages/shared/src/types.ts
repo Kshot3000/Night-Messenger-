@@ -1,4 +1,4 @@
-/** Core domain types for Midnight Messenger MVP */
+/** Core domain types for Night Messenger. */
 
 export type PrivacyLayer = 'on_chain' | 'off_chain' | 'selective';
 
