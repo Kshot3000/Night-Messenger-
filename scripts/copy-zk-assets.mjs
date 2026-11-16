@@ -58,3 +58,40 @@ if (!keys) {
     "No prover keys under contracts/src/managed/night_messenger/keys; testers will not be able to prove from this build.",
   );
 }
+
+// Public SRS parameters for on-device proving (apps/web/src/lib/zkir-v3.worker.ts).
+// srs.midnight.network sends no CORS headers, so the site serves verified copies.
+{
+  const { SRS_PARAM_SHA256, SRS_SOURCE, srsParamFileName } = await import("../apps/web/src/lib/zk-params.ts");
+  const zkirDir = path.join(publicZk, "zkir");
+  const paramsDir = path.join(root, "apps", "web", "public", "zk", "params");
+  const ks = new Set();
+  if (existsSync(zkirDir)) {
+    const { pathToFileURL } = await import("node:url");
+    const { readdirSync } = await import("node:fs");
+    const zkirPkg = path.join(root, "apps", "web", "node_modules", "@midnightntwrk", "zkir-v3");
+    const { Zkir } = await import(pathToFileURL(path.join(zkirPkg, "midnight_zkir_wasm_fs.js")).href);
+    for (const f of readdirSync(zkirDir).filter((n) => n.endsWith(".bzkir"))) {
+      ks.add(Zkir.deserialize(new Uint8Array(readFileSync(path.join(zkirDir, f)))).getK());
+    }
+  }
+  mkdirSync(paramsDir, { recursive: true });
+  const sha = (b) => createHash("sha256").update(b).digest("hex");
+  const sorted = [...ks].sort((a, b) => a - b);
+  for (const k of sorted) {
+    const expected = SRS_PARAM_SHA256[k];
+    if (!expected) throw new Error(`No pinned SRS hash for k=${k}; add it to apps/web/src/lib/zk-params.ts`);
+    const dest = path.join(paramsDir, srsParamFileName(k));
+    if (existsSync(dest) && sha(readFileSync(dest)) === expected) continue;
+    const cached = process.env.NM_SRS_CACHE ? path.join(process.env.NM_SRS_CACHE, srsParamFileName(k)) : "";
+    let bytes = cached && existsSync(cached) ? readFileSync(cached) : undefined;
+    if (!bytes || sha(bytes) !== expected) {
+      const res = await fetch(new URL(srsParamFileName(k), SRS_SOURCE));
+      if (!res.ok) throw new Error(`SRS k=${k}: HTTP ${res.status}`);
+      bytes = Buffer.from(await res.arrayBuffer());
+    }
+    if (sha(bytes) !== expected) throw new Error(`SRS k=${k} failed its SHA-256 check`);
+    writeFileSync(dest, bytes);
+  }
+  console.log(`SRS params for on-device proving: k=${sorted.join(", ") || "none"}`);
+}

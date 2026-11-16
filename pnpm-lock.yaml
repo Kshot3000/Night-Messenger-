@@ -120,6 +120,9 @@ importers:
       '@midnightntwrk/onchain-runtime-v4':
         specifier: 4.0.0
         version: 4.0.0
+      '@midnightntwrk/zkir-v3':
+        specifier: 3.2.0
+        version: 3.2.0
       buffer:
         specifier: 6.0.3
         version: 6.0.3

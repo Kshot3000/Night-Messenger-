@@ -165,7 +165,7 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 **Known limits:**
 
 - **Metadata at the relay.** The relay sees the recipient's mailbox id (a hash of their public key), envelope sizes, timing and IP addresses. Use Tor or a VPN if that matters. It keeps no request log.
-- **Chain simulator trust.** The local simulator, like Midnight's proof server, receives your private circuit inputs to run the circuit, so it must run on your own machine (it binds to 127.0.0.1). On Preview, those inputs go to whatever proof server Lace is configured to use (Local on your machine, or Remote if you select it — see above).
+- **Chain simulator trust.** The local simulator, like Midnight's proof server, receives your private circuit inputs to run the circuit, so it must run on your own machine (it binds to 127.0.0.1). On Preview, the hosted app proves in your own browser tab by default, so those inputs stay on your device (see above).
 - **Small sets.** With few members, "one of the members" hides little. Receipts are capped at one per member, but a sender can also acknowledge their own message.
 - **No forward secrecy** if a recipient's long-term key leaks later; single device, manual backup; no audit.
 - **Invite exchange** is manual (copy/paste); verify invites out of band.
@@ -198,21 +198,23 @@ The hosted app is at [https://kshot3000.github.io/Night-Messenger-/](https://ksh
 
 Phones cannot connect Lace. Ciphertext delivery uses an interim relay exposed from the build box with a Cloudflare quick tunnel (no Cloudflare account). The published URL lives in [`relay.json`](https://kshot3000.github.io/Night-Messenger-/relay.json) and can be changed on `gh-pages` without a site rebuild (`scripts/update-pages-relay.sh`). You can also pass `?relay=https://…` on `/private`. After a box or tunnel restart, run `scripts/start-preview-relay-tunnel.sh` then `scripts/update-pages-relay.sh`. Quick-tunnel hostnames change each time, and the tunnel is not a production host.
 
-**Proof server — can a tester prove without running Docker?**
+**Proving — no Docker needed.** The app proves Night Messenger's circuits **in your browser tab** (a Web Worker running `@midnightntwrk/zkir-v3`, on your device) and then asks Lace only to balance, sign and submit. Expect roughly 30–90 seconds per step on a laptop; the first message may run three steps (create inbox, add members, post).
 
-The app asks Lace for `getProvingProvider()` and uses whatever the wallet is configured to use. If that method is missing, it falls back to a local proof server at `http://localhost:6300`.
+Why not Lace's own prover? Lace 2.5.1's "Run in this app (WASM)" proof generator uses `@midnight-ntwrk/zkir-v2`, which only reads ZKIR v2. Compact 0.36.0 (ledger 9) emits ZKIR v3, so Lace fails at "Circuit check #1" before proving (`expected one of 'ir-source[v2-generic]' or 'ir-source[v2]', got 'ir-source[v3-generic]'`). Midnight's own testkit proves 0.36 circuits with `zkir-v3` for the same reason.
 
-(a) **Lace Settings → Midnight.** [IOHK Support](https://iohk.zendesk.com/hc/en-us/articles/57817798524313-How-do-I-set-up-a-proof-server-for-Midnight-transactions) documents two options: **Local** (your own proving service, typically Docker) and **Remote** ("trusted remote proof server", "recommended for most users"). Remote shows only servers Lace already lists; there is no field to type a custom address. Midnight's own [install guide](https://docs.midnight.network/getting-started/installation) and [Proving transactions locally](https://docs.midnight.network/guides/local-proving) (written against Lace 2.4.2) still say Local at `http://localhost:6300` is the only settings choice. This repository cannot open a current Lace UI, so testers should look at their own Settings → Midnight. If Remote is listed, it is the least-install path (no Docker). If it is missing or proving fails, run proof server 9.0.0 locally:
+The public SRS parameters the prover needs (`bls_midnight_2p13`–`15`, no secrets) are served from this site under `/zk/params`, because `srs.midnight.network` sends no CORS headers; each download is checked against the SHA-256 values pinned in Midnight's wallet SDK.
+
+Testing overrides on `/private`: `?prover=local` uses a proof server you run at `http://localhost:6300`; `?prover=wallet` uses Lace's `getProvingProvider()` (for future Lace versions that read ZKIR v3); `?prover=device` returns to the default. The choice is remembered in this browser. To run a local proof server:
 
 ```bash
 docker run --rm -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:9.0.0
 ```
 
-Then set Lace to **Local** and retry. Bind only to 127.0.0.1; the proof server has no authentication or TLS.
+Bind only to 127.0.0.1; the proof server has no authentication or TLS.
 
 (b) **A proof server we host.** We are not running one. GitHub Pages is static, testers cannot point Lace Remote at a custom URL, and a remote prover sees private inputs in the clear: this contract's member secret `sk`, Merkle path and author `blind`, plus the wallet's shielded coin keys and DUST secret key when the wallet also proves fees there ([Proving transactions locally](https://docs.midnight.network/guides/local-proving), [MPS-0004](https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/mps/mps-0004-trusted-proof-serving.md)). The Midnight Foundation does not recommend remote proving outside a trusted execution environment. We will not add a DApp setting that sends those witnesses to a server we operate.
 
-**Privacy tradeoff of the least-install path:** Lace Remote, when it is available, avoids Docker, but whoever operates (or compromises) that remote server can read the private inputs above and could impersonate that inbox member or spend those coins. The private path is Local + Docker 9.0.0 on your machine.
+**Privacy:** the default in-browser prover keeps witnesses on your device. Any remote proof server (including Lace Remote, where offered) can read the private inputs above and could impersonate that inbox member.
 
 ## Testnet and audit status
 

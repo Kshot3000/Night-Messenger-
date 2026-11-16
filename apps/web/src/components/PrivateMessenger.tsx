@@ -26,6 +26,7 @@ import { Icon } from "./Icon";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, parseRelayParam, resolveRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { loadPublishedRelay } from "@/lib/relay-config";
+import { describeError } from "@/lib/error-detail";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
 import { CHAIN_KEY, DEFAULT_CHAIN, chainRisk, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
 import { decodePreviewReceipt, previewInboxExists, type PreviewDecodedReceipt } from "@/lib/preview-receipt";
@@ -240,7 +241,8 @@ export function PrivateMessenger() {
         chain: { posted: true, seq: rc.seq, receipts: rc.receipts, acked: true },
       }));
     } catch (e) {
-      setNotice((e as Error).message);
+      console.error("Preview ack failed", e);
+      setNotice(describeError(e));
     } finally {
       setAcking(null);
     }
@@ -289,7 +291,7 @@ export function PrivateMessenger() {
       await commit(next);
       if (previewMode && api) {
         try {
-          setNotice("Approve the Lace prompts. The first message may also create the inbox and add both members.");
+          setNotice("Proving on this device (about 30–90 seconds per step), then approve the Lace prompts. The first message may also create the inbox and add both members.");
           const { previewSend } = await import("@/lib/preview-contract");
           const rc = await previewSend({
             api,
@@ -306,7 +308,8 @@ export function PrivateMessenger() {
             chain: { posted: rc.posted, seq: rc.seq, receipts: rc.receipts },
           });
         } catch (e) {
-          next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: false, error: (e as Error).message } });
+          console.error("Preview chain send failed", e);
+          next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: false, error: describeError(e) } });
         }
         await commit(next);
       } else if (chainInfo?.ok) {

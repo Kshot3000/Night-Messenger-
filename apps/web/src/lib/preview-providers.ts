@@ -8,7 +8,7 @@ import { dappConnectorWalletProviders } from "@midnight-ntwrk/midnight-js-dapp-c
 import { CostModel } from "@midnight-ntwrk/midnight-js-protocol/v9";
 import { networks } from "@midnight-ntwrk/midnight-js-utils";
 import { Level } from "level";
-import { createProofProvider, type ProofProviderKind } from "./proof-provider";
+import { createProofProvider, proverPreference, type ProofProviderKind } from "./proof-provider";
 import { storagePasswordFromSecret } from "./storage-password";
 
 function publicBasePath(): string {
@@ -18,6 +18,12 @@ function publicBasePath(): string {
     return "/Night-Messenger-";
   }
   return "";
+}
+
+/** Where this site serves the public SRS parameters for on-device proving. */
+export function zkParamsBaseUrl(): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}${publicBasePath()}/zk/params`;
 }
 
 /** Origin + base path where this site serves keys/, zkir/, and compiler/. */
@@ -51,6 +57,7 @@ export async function buildPreviewProviders(
     api,
     zkConfigProvider,
     costModel,
+    { preference: proverPreference(), paramsBase: zkParamsBaseUrl() },
   );
 
   const { walletProvider, midnightProvider } = await dappConnectorWalletProviders(api as never);
