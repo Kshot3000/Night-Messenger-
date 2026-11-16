@@ -3,6 +3,8 @@ packages:
   - 'packages/*'
   - 'contracts'
 overrides:
+  '@midnightntwrk/ledger-v9': 1.0.0
+  '@midnightntwrk/onchain-runtime-v4': 4.0.0
   regenerate-unicode-properties: 10.2.2
 allowBuilds:
   sharp: true
@@ -10,6 +12,10 @@ allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: true
   msgpackr-extract: false
+  classic-level: true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
 minimumReleaseAgeExclude:
   - '@next/env@15.5.27'
   - '@next/eslint-plugin-next@15.5.27'

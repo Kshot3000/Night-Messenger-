@@ -9,6 +9,7 @@
  */
 import * as RT from "@midnight-ntwrk/compact-runtime";
 import { Contract, ledger } from "../src/managed/night_messenger/contract/index.js";
+import { deployState, runCircuit } from "../lib/runtime.mjs";
 import * as E from "../../packages/shared/src/e2ee.ts";
 import { createRelay } from "../../apps/relay/server.mjs";
 
@@ -28,8 +29,7 @@ const witnesses = {
 const contract = new Contract(witnesses);
 const ADDR = RT.sampleContractAddress();
 const COIN = "0".repeat(64);
-const call = (state, ps, name, ...args) =>
-  contract.impureCircuits[name](RT.createCircuitContext(ADDR, COIN, state, ps), ...args).context.currentQueryContext.state;
+const call = async (state, ps, name, ...args) => (await runCircuit(contract, { address: ADDR, coin: COIN }, state, ps, name, args)).state;
 
 try {
   // 1. Identities are made on each device; only invites are exchanged.
@@ -45,10 +45,10 @@ try {
   const dm = await E.dmInboxes(alice, bobInvite);
   const inbox = dm.mine;
   const A = { sk: alice.chainSecret, inbox };
-  let state = contract.initialState(RT.createConstructorContext(A, COIN)).currentContractState.data;
-  state = call(state, A, "createInbox", dm.seed);
-  state = call(state, A, "addMember", inbox, alice.member);
-  state = call(state, A, "addMember", inbox, E.fromHex(bobInvite.member));
+  let state = await deployState(contract, A, COIN);
+  state = await call(state, A, "createInbox", dm.seed);
+  state = await call(state, A, "addMember", inbox, alice.member);
+  state = await call(state, A, "addMember", inbox, E.fromHex(bobInvite.member));
   say("chain", `inbox ${short(inbox)} created with ${ledger(state).inboxes.lookup(inbox).members} private member leaves`);
 
   // 3. Alice seals, uploads ciphertext to Bob's mailbox, posts the commitment on-chain.
@@ -59,7 +59,7 @@ try {
     body: JSON.stringify({ envelope: E.toB64u(sealed.envelope) }),
   }).then((r) => r.json());
   say("relay", `stored ${sealed.envelope.length} B of ciphertext, commitment ${short(up.commitment)} (cannot read it, cannot see the sender)`);
-  state = call(state, { ...A, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", inbox, sealed.commitment);
+  state = await call(state, { ...A, blind: E.fromHex(sealed.payload.blind) }, "postEnvelope", inbox, sealed.commitment);
   const post = ledger(state).posts.lookup(sealed.commitment);
   say("chain", `post #${post.seq}: commitment ${short(sealed.commitment)}, authorTag ${short(post.authorTag)}; membership proven, sender hidden`);
 
@@ -76,7 +76,7 @@ try {
   if (!ok) throw new Error("author tag mismatch");
 
   // 5. Bob acknowledges delivery anonymously; anyone can count receipts.
-  state = call(state, { sk: bob.chainSecret, inbox }, "ackDelivery", opened.commitment);
+  state = await call(state, { sk: bob.chainSecret, inbox }, "ackDelivery", opened.commitment);
   say("chain", `delivery receipts for ${short(opened.commitment)}: ${ledger(state).ackCount.lookup(opened.commitment)}`);
 
   // 6. Selective disclosure: Bob hands a reviewer {commitment, member, blind} for this one message.

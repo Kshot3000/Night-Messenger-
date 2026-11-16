@@ -27,15 +27,20 @@ if (sim) {
   const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "managed", "night_messenger");
   const { ledger } = await import(pathToFileURL(path.join(OUT, "contract", "index.js")).href);
   const { indexerPublicDataProvider } = await import("@midnight-ntwrk/midnight-js-indexer-public-data-provider");
-  const { setNetworkId } = await import("@midnight-ntwrk/midnight-js-network-id");
-  setNetworkId("preprod");
+  const { networks } = await import("@midnight-ntwrk/midnight-js-utils");
+  const { ContractState } = await import("@midnight-ntwrk/compact-runtime");
   const BF = process.env.BLOCKFROST_MIDNIGHT_PREPROD_ID ?? "";
-  const q = BF ? `?project_id=${encodeURIComponent(BF)}` : "";
-  const http = process.env.MIDNIGHT_INDEXER_URL || `https://midnight-preprod.blockfrost.io/api/v0${q}`;
-  const ws = process.env.MIDNIGHT_INDEXER_WS_URL || `wss://midnight-preprod.blockfrost.io/api/v0/ws${q}`;
-  const st = await indexerPublicDataProvider(http, ws).queryContractState(address);
-  if (!st) throw new Error("contract not found on the indexer");
-  const l = ledger(st.data ?? st);
+  // networks.preprod puts the Blockfrost token on the URLs: never log them.
+  const net = process.env.MIDNIGHT_INDEXER_URL
+    ? { indexer: { queryURL: process.env.MIDNIGHT_INDEXER_URL, subscriptionURL: process.env.MIDNIGHT_INDEXER_WS_URL ?? "" } }
+    : BF
+      ? networks.preprod(BF)
+      : null;
+  if (!net) throw new Error("set BLOCKFROST_MIDNIGHT_PREPROD_ID (Blockfrost 'Midnight Preprod' project id) or MIDNIGHT_INDEXER_URL");
+  const read = await indexerPublicDataProvider({ queryURL: net.indexer.queryURL, subscriptionURL: net.indexer.subscriptionURL }).queryContractState(address);
+  if (!read) throw new Error("contract not found on the indexer");
+  // Midnight.js 5 hands back serialized, era-tagged state; decode with the v9 runtime.
+  const l = ledger(read.contractState.deserialize({ v9: ContractState }).data);
   console.log(JSON.stringify({ source: `midnight-preprod ${address}`, inboxes: String(l.inboxCount), registrations: String(l.membersAdded), envelopesPosted: String(l.postCount), deliveryReceipts: String(l.deliveryCount), at: new Date().toISOString() }, null, 2));
 } else {
   console.error("usage: stats.mjs --sim <url> | --contract <address>");

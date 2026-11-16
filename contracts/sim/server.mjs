@@ -32,6 +32,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as RT from "@midnight-ntwrk/compact-runtime";
+import { deployState, runCircuit } from "../lib/runtime.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.env.NM_OUT ?? path.join(HERE, "..", "src", "managed", "night_messenger");
@@ -59,7 +60,7 @@ export async function createChainSim({ proofServer = "", origins = "http://local
   const ADDR = RT.sampleContractAddress();
   const COIN = "0".repeat(64);
   const deployer = { sk: new Uint8Array(globalThis.crypto.getRandomValues(new Uint8Array(32))) };
-  let state = contract.initialState(RT.createConstructorContext(deployer, COIN)).currentContractState.data;
+  let state = await deployState(contract, deployer, COIN);
   const L = () => ledger(state);
   const log = []; // public tx log: circuit, public args, time, proof info
 
@@ -67,22 +68,20 @@ export async function createChainSim({ proofServer = "", origins = "http://local
   if (proofServer && existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) {
     const { NodeZkConfigProvider } = await import("@midnight-ntwrk/midnight-js-node-zk-config-provider");
     const { httpClientProvingProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
-    const { setNetworkId } = await import("@midnight-ntwrk/midnight-js-network-id");
-    setNetworkId("preprod");
     prover = httpClientProvingProvider(proofServer, new NodeZkConfigProvider(OUT), { timeout: 600_000 });
   }
 
   async function run(ps, name, args, publicArgs) {
-    const r = contract.impureCircuits[name](RT.createCircuitContext(ADDR, COIN, state, ps), ...args);
+    const r = await runCircuit(contract, { address: ADDR, coin: COIN }, state, ps, name, args);
     let proof = null;
     if (prover) {
-      const pd = r.proofData;
+      const pd = r.context.callProofDataTrace.at(-1);
       const pre = RT.proofDataIntoSerializedPreimage(pd.input, pd.output, pd.publicTranscript, pd.privateTranscriptOutputs, name);
       const t0 = Date.now();
       const bytes = await prover.prove(pre, name);
       proof = { bytes: bytes.byteLength, ms: Date.now() - t0 };
     }
-    state = r.context.currentQueryContext.state; // commit only after a successful proof
+    state = r.state; // commit only after a successful proof
     const entry = { n: log.length + 1, circuit: name, public: publicArgs, at: new Date().toISOString(), proof };
     log.push(entry);
     Object.defineProperty(entry, "result", { value: r.result, enumerable: false });

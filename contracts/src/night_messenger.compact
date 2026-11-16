@@ -55,10 +55,11 @@
  * postEnvelope inserts the sender's own nullifier up front, so a receipt
  * always comes from a member other than the author (no self-receipts).
  *
- * Status: compiles with compactc 0.31.1. Not audited. Testnet only.
+ * Status: compiles with Compact toolchain 0.36.0 (compactc 0.36.0, language 0.28.0,
+ * compact-runtime 0.21.0). Not audited. Testnet only.
  */
 
-pragma language_version >= 0.23;
+pragma language_version >= 0.28;
 
 import CompactStandardLibrary;
 
