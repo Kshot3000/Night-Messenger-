@@ -1,0 +1,97 @@
+{
+  "network": "midnight-preview",
+  "status": "deployed-drill-passed",
+  "contract": "contracts/src/night_messenger.compact",
+  "compiler": "compactc 0.36.0",
+  "language": "0.28.0",
+  "runtime": "compact-runtime 0.21.0, midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0",
+  "contractAddress": "d2eb042ce54652684fa9cfeace5e40f0da3369c81738bd0570e9513a8199af05",
+  "explorer": "https://preview.midnightexplorer.com/contracts/0xd2eb042ce54652684fa9cfeace5e40f0da3369c81738bd0570e9513a8199af05",
+  "deployer": "mn_addr_preview1v9auk0rkac0cq82x6sp6ya8vpxeqqk58fas28fq4jupyy5qax86seu88yw",
+  "deployedAt": "2026-11-16T14:34:26.317Z",
+  "inboxId": "0db0cb2e8ce6bde7a23de1839c7d1f4c768d03846d75cde7f79650383c1914a3",
+  "commitment": "f875530954e9a0d98a66164e93e16f8fef5d758468c703d3b1a221e7e7a2e7cf",
+  "txs": {
+    "deploy": {
+      "txId": "00b150e589a0fbd0fe68a2a681305f84f02cbbef3b6d5d5e52ccc600d9f8da9718",
+      "blockHeight": 137315,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x00b150e589a0fbd0fe68a2a681305f84f02cbbef3b6d5d5e52ccc600d9f8da9718"
+    },
+    "createInbox": {
+      "txId": "00dfe5d922bc89256a7ae864ba25f25da8af1af4015183feb55c05dab79cf2c75f",
+      "blockHeight": 137318,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x00dfe5d922bc89256a7ae864ba25f25da8af1af4015183feb55c05dab79cf2c75f"
+    },
+    "addMember_alice": {
+      "txId": "003c788ec1b9922fb7eb91899b81adbf8568ec7cf92308b9f768be1ba616f87452",
+      "blockHeight": 137322,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x003c788ec1b9922fb7eb91899b81adbf8568ec7cf92308b9f768be1ba616f87452"
+    },
+    "addMember_bob": {
+      "txId": "0069eb5d8a49d12bf94ddc7d5e4ce2c3b5e1050d097dd51f1186648e9f762c09f3",
+      "blockHeight": 137326,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x0069eb5d8a49d12bf94ddc7d5e4ce2c3b5e1050d097dd51f1186648e9f762c09f3"
+    },
+    "postEnvelope": {
+      "txId": "00494ddfb420de941992728474157d0e64fd60c58946d8859701b12199492a920e",
+      "blockHeight": 137330,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x00494ddfb420de941992728474157d0e64fd60c58946d8859701b12199492a920e"
+    },
+    "ackDelivery": {
+      "txId": "001a741ecfd9713a8bf3475caec8a2fbdbfe253e19117e3080ae12502ef59f543d",
+      "blockHeight": 137333,
+      "status": "SucceedEntirely",
+      "explorer": "https://preview.midnightexplorer.com/transactions/0x001a741ecfd9713a8bf3475caec8a2fbdbfe253e19117e3080ae12502ef59f543d"
+    }
+  },
+  "check": {
+    "authorTagMatches": true,
+    "acks": "1"
+  },
+  "token": "tNIGHT",
+  "networkSwitch": "MIDNIGHT_NETWORK=preview",
+  "deployScript": "contracts/preprod/night-messenger-preprod.mjs",
+  "deployerAddress": "mn_addr_preview1v9auk0rkac0cq82x6sp6ya8vpxeqqk58fas28fq4jupyy5qax86seu88yw",
+  "endpoints": {
+    "indexer": "https://indexer.preview.midnight.network/api/v4/graphql",
+    "indexerWS": "wss://indexer.preview.midnight.network/api/v4/graphql/ws",
+    "node": "https://rpc.preview.midnight.network",
+    "nodeWS": "wss://rpc.preview.midnight.network",
+    "proofServer": "http://127.0.0.1:6300",
+    "faucet": "https://midnight-tmnight-preview.nethermind.dev/",
+    "faucetAlias": "https://faucet.preview.midnight.network/",
+    "explorer": "https://preview.midnightexplorer.com"
+  },
+  "faucetTx": {
+    "txId": "00ded310da19462d950dc7f11a12f653ee4cb2c00d4337c3ab483b7eca533a49de",
+    "amount": "5000 tNIGHT",
+    "status": "SUCCESS",
+    "blockHeight": 137244
+  },
+  "dustRegistrationTx": {
+    "txId": "000e7269f841cbf4ca07ddd73fc584fd2d6e949ea6f685c676351c341df951c173",
+    "status": "SUCCESS",
+    "blockHeight": 137285
+  },
+  "notes": [
+    "Preview can reset: Midnight relaunched it as a new chain on 7 November 2026, wiping contracts, balances and history. Treat Preview deploys as disposable. The Wave 3 entry stays on Preprod.",
+    "Fees on deploy/postEnvelope/ackDelivery were paid in DUST. Those transactions have no unshielded created or spent outputs.",
+    "A first deploy attempt failed at balanceTx because it ran before the DUST registration confirmed; the successful deploy was the retry after block 137285."
+  ],
+  "verify": {
+    "commitment": "f875530954e9a0d98a66164e93e16f8fef5d758468c703d3b1a221e7e7a2e7cf",
+    "acks": "1",
+    "explorerContract": "https://preview.midnightexplorer.com/contracts/0xd2eb042ce54652684fa9cfeace5e40f0da3369c81738bd0570e9513a8199af05",
+    "explorerAck": "https://preview.midnightexplorer.com/transactions/0x001a741ecfd9713a8bf3475caec8a2fbdbfe253e19117e3080ae12502ef59f543d",
+    "posted": true,
+    "inboxId": "0db0cb2e8ce6bde7a23de1839c7d1f4c768d03846d75cde7f79650383c1914a3",
+    "authorTag": "587a7bf54a9ed9d3141a2dc040cfa975ca1860d7164fb1023fcce2db9aa6a4d0",
+    "seq": "0",
+    "readFromIndexerAtHeight": 137333
+  }
+}
