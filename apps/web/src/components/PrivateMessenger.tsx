@@ -24,7 +24,7 @@ import {
 import { Brand } from "./Brand";
 import { Icon } from "./Icon";
 import { ConnectWalletButton } from "./ConnectWalletButton";
-import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, parseRelayParam, resolveRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
+import { DEFAULT_RELAY, addContact, addMessage, clearStoredRelayOverride, contactAddOutcome, emptyState, isRelayUrl, parseRelayParam, resolveRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { loadPublishedRelay } from "@/lib/relay-config";
 import { describeError } from "@/lib/error-detail";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
@@ -71,12 +71,12 @@ export function PrivateMessenger() {
     (async () => {
       if (!globalThis.crypto?.subtle || !(await x25519Supported())) return setBoot("unsupported");
       try {
+        // `?relay=` applies to this page load only; an override saved by an
+        // older build is removed so the published relay.json wins.
+        clearStoredRelayOverride(globalThis.localStorage);
         const fromQuery = parseRelayParam(searchParams.get("relay"));
-        const stored = localStorage.getItem(RELAY_KEY);
-        const published = await loadPublishedRelay();
-        const chosen = resolveRelayUrl({ query: fromQuery, stored, published, fallback: DEFAULT_RELAY });
-        setRelay(chosen);
-        if (fromQuery) localStorage.setItem(RELAY_KEY, fromQuery);
+        const published = fromQuery ? null : await loadPublishedRelay();
+        setRelay(resolveRelayUrl({ query: fromQuery, published, fallback: DEFAULT_RELAY }));
         setChain(localStorage.getItem(CHAIN_KEY) || DEFAULT_CHAIN);
         const key = await deviceKey();
         keyRef.current = key;
@@ -148,7 +148,7 @@ export function PrivateMessenger() {
         if (!contact) {
           const pub = fromB64u(o.senderKey);
           const stranger: PublicIdentity = { v: 1, name: `${o.payload.from.slice(0, 28)} (not in contacts)`, encPublic: o.senderKey, member: o.payload.member, mailbox: await mailboxFor(pub) };
-          s = addContact(s, stranger);
+          s = addContact(s, stranger, undefined, { unverified: true });
           contact = s.contacts.find((c) => c.mailbox === stranger.mailbox)!;
         }
         // The payload must name one of the two DM inbox ids only this pair can derive.
@@ -380,7 +380,13 @@ export function PrivateMessenger() {
       <div className={`pm-layout ${contact ? "has-thread" : ""}`}>
         <aside className="pm-side" aria-label="Contacts">
           <IdentityCard me={me} pub={myPublic} onNotice={setNotice} onForget={() => { forgetEverything(); location.reload(); }} />
-          <AddContact myMailbox={myPublic.mailbox} onAdd={async (c) => { await commit(addContact(stateRef.current, c)); setActive(c.mailbox); }} onNotice={setNotice} />
+          <AddContact myMailbox={myPublic.mailbox} onAdd={async (c) => {
+            const outcome = contactAddOutcome(stateRef.current, c);
+            await commit(addContact(stateRef.current, c));
+            setActive(c.mailbox);
+            if (outcome === "upgraded") setNotice(`Added ${c.name}. Earlier messages from this key are now checked against the invite.`);
+            else if (outcome === "exists") setNotice("That contact is already in your list.");
+          }} onNotice={setNotice} />
           <ul className="pm-contacts">
             {state.contacts.map((c) => (
               <li key={c.mailbox}>
@@ -392,7 +398,7 @@ export function PrivateMessenger() {
             ))}
             {!state.contacts.length && <li className="pm-muted pm-small">No contacts yet. Swap invite codes with someone (open this page in a second browser to try it alone).</li>}
           </ul>
-          <Settings relay={relay} chain={chain} onRelay={(u) => { setRelay(u); localStorage.setItem(RELAY_KEY, u); }} onChain={(u) => { setChain(u); localStorage.setItem(CHAIN_KEY, u); }} onNotice={setNotice} />
+          <Settings relay={relay} chain={chain} onRelay={(u) => setRelay(u)} onChain={(u) => { setChain(u); localStorage.setItem(CHAIN_KEY, u); }} onNotice={setNotice} />
         </aside>
         <section className="pm-thread" aria-label="Conversation">
           {!contact ? (
@@ -570,16 +576,16 @@ function Settings({ relay, chain, onRelay, onChain, onNotice }: { relay: string;
       <form className="pm-stack" onSubmit={(e) => {
         e.preventDefault();
         if (!isRelayUrl(r) || !isRelayUrl(c)) return onNotice("Use https://, or http:// on localhost only.");
-        onRelay(r);
+        onRelay(parseRelayParam(r) ?? r);
         onChain(c);
-        onNotice("Saved.");
+        onNotice("Relay set for this visit (not saved); chain simulator saved.");
       }}>
         <label className="pm-label pm-small">Relay (ciphertext only)<input className="pm-input pm-mono" value={r} onChange={(e) => setR(e.target.value)} /></label>
         <label className="pm-label pm-small">Chain simulator (used only when Lace is not connected)<input className="pm-input pm-mono" value={c} onChange={(e) => setC(e.target.value)} /></label>
         <p className="pm-muted pm-small">
-          Ciphertext delivery uses the relay in the address bar (<span className="pm-mono">?relay=https://…</span>), or the published <span className="pm-mono">relay.json</span> on this site, unless you save a different https URL here.
+          Ciphertext delivery uses the relay in the address bar (<span className="pm-mono">?relay=https://…</span>) or, without one, the published <span className="pm-mono">relay.json</span> on this site. A relay set here or in a link lasts only until you reload; it is never saved.
         </p>
-        <button className="button button-outline button-small">Save</button>
+        <button className="button button-outline button-small">Apply</button>
       </form>
     </details>
   );

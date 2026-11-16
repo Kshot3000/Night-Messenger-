@@ -4,6 +4,10 @@ import type { PublicIdentity } from "@midnight-messenger/shared";
 
 export const DEFAULT_RELAY =
   process.env.NEXT_PUBLIC_NM_RELAY_URL || "http://localhost:8787";
+/**
+ * Legacy localStorage key from builds that persisted `?relay=` and the Settings
+ * relay. It is no longer written; boot removes it so relay.json wins.
+ */
 export const RELAY_KEY = "nm_private_relay_v1";
 
 export type ChatMessage = {
@@ -20,7 +24,8 @@ export type ChatMessage = {
   chain?: ChainStatus;
 };
 export type ChainStatus = { posted: boolean; seq?: string; receipts?: string; acked?: boolean; proofMs?: number; error?: string };
-export type Contact = PublicIdentity & { addedAt: string };
+/** `unverified`: a placeholder made from an incoming message before its invite was added. */
+export type Contact = PublicIdentity & { addedAt: string; unverified?: boolean };
 export type PrivateState = {
   v: 1;
   contacts: Contact[];
@@ -29,10 +34,47 @@ export type PrivateState = {
 };
 export const emptyState = (): PrivateState => ({ v: 1, contacts: [], threads: {}, cursor: 0 });
 
-/** Pure reducer helpers (tested in apps/web/tests/private-store.test.mjs). */
-export function addContact(state: PrivateState, c: PublicIdentity, now = new Date().toISOString()): PrivateState {
-  if (state.contacts.some((x) => x.mailbox === c.mailbox)) return state;
-  return { ...state, contacts: [...state.contacts, { ...c, addedAt: now }] };
+/** Placeholder contacts come from messages that arrived before the sender's invite. */
+export function isPlaceholderContact(c: Contact): boolean {
+  return c.unverified === true || / \(not in contacts\)$/.test(c.name);
+}
+
+/**
+ * Pure reducer helpers (tested in apps/web/tests/private-store.test.mjs).
+ *
+ * Contacts are keyed by mailbox. Adding a real invite for a mailbox that only
+ * has a placeholder (a sender seen before their invite was pasted, common
+ * right after restoring keys, when the relay replays the mailbox) upgrades the
+ * placeholder in place and re-checks that thread's received messages against
+ * the invite's member commitment. A placeholder never overwrites a contact.
+ */
+export function addContact(
+  state: PrivateState,
+  c: PublicIdentity,
+  now = new Date().toISOString(),
+  options: { unverified?: boolean } = {},
+): PrivateState {
+  const i = state.contacts.findIndex((x) => x.mailbox === c.mailbox);
+  if (i < 0) {
+    const added: Contact = { ...c, addedAt: now, ...(options.unverified ? { unverified: true } : {}) };
+    return { ...state, contacts: [...state.contacts, added] };
+  }
+  const existing = state.contacts[i];
+  if (options.unverified || !isPlaceholderContact(existing) || existing.encPublic !== c.encPublic) return state;
+  const upgraded: Contact = { ...c, addedAt: existing.addedAt };
+  const contacts = state.contacts.map((x, j) => (j === i ? upgraded : x));
+  const list = state.threads[c.mailbox];
+  const threads = list
+    ? { ...state.threads, [c.mailbox]: list.map((m) => (m.dir === "in" ? { ...m, senderVerified: m.member === c.member } : m)) }
+    : state.threads;
+  return { ...state, contacts, threads };
+}
+
+/** What adding this invite would do, for the UI notice. */
+export function contactAddOutcome(state: PrivateState, c: PublicIdentity): "added" | "upgraded" | "exists" {
+  const existing = state.contacts.find((x) => x.mailbox === c.mailbox);
+  if (!existing) return "added";
+  return isPlaceholderContact(existing) && existing.encPublic === c.encPublic ? "upgraded" : "exists";
 }
 export function addMessage(state: PrivateState, mailbox: string, m: ChatMessage): PrivateState {
   const list = state.threads[mailbox] ?? [];
@@ -83,21 +125,21 @@ export function isTransientRelay(u: string): boolean {
   }
 }
 
-/** Prefer a share-link `?relay=`, then a durable user-saved URL, then published `relay.json`. */
-export function resolveRelayUrl(options: {
-  query?: string | null;
-  stored?: string | null;
-  published?: string | null;
-  fallback: string;
-}): string {
-  const query = parseRelayParam(options.query);
-  if (query) return query;
-  const stored = parseRelayParam(options.stored);
-  const published = parseRelayParam(options.published);
-  if (stored && !isTransientRelay(stored)) return stored;
-  if (published) return published;
-  if (stored) return stored;
-  return options.fallback;
+/**
+ * Pick the relay for this page load: a share-link `?relay=` (in memory only,
+ * never saved), else the published relay.json, else the build default.
+ */
+export function resolveRelayUrl(options: { query?: string | null; published?: string | null; fallback: string }): string {
+  return parseRelayParam(options.query) ?? parseRelayParam(options.published) ?? options.fallback;
+}
+
+/** Remove any relay override an older build saved, so relay.json wins. */
+export function clearStoredRelayOverride(storage: Pick<Storage, "removeItem"> | null | undefined): void {
+  try {
+    storage?.removeItem(RELAY_KEY);
+  } catch {
+    /* storage may be unavailable (private mode); nothing to clear */
+  }
 }
 
 export function updateMessage(state: PrivateState, mailbox: string, commitment: string, patch: Partial<ChatMessage>): PrivateState {
