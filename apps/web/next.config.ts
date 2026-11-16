@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   transpilePackages: ["@midnight-messenger/shared"],
+  env: {
+    NEXT_PUBLIC_BASE_PATH: isPages ? repoBase : "",
+  },
   ...(isPages
     ? {
         basePath: repoBase,

@@ -181,11 +181,15 @@ When it runs, `deployments/preprod.json` records the address and `https://prepro
 
 ## Preview status
 
-Not deployed yet. Preview already runs ledger 9, and Midnight still hosts its Preview indexer and RPC (no Blockfrost token). That is a way to prove the deploy path while a Preprod project id is pending. The Wave 3 entry stays on Preprod.
+Deployed on Midnight Preview (ledger 9) as a disposable test. The Wave 3 entry stays on Preprod.
+
+- **Contract:** `d2eb042ce54652684fa9cfeace5e40f0da3369c81738bd0570e9513a8199af05` ([explorer](https://preview.midnightexplorer.com/contracts/0xd2eb042ce54652684fa9cfeace5e40f0da3369c81738bd0570e9513a8199af05))
+- **Deploy tx:** `00b150e589a0fbd0fe68a2a681305f84f02cbbef3b6d5d5e52ccc600d9f8da9718`
+- **ackDelivery tx:** `001a741ecfd9713a8bf3475caec8a2fbdbfe253e19117e3080ae12502ef59f543d`
+- **Test commitment:** `f875530954e9a0d98a66164e93e16f8fef5d758468c703d3b1a221e7e7a2e7cf` (one delivery receipt on-chain)
+- Endpoints, the full tx list and the drill result: [`deployments/preview.json`](deployments/preview.json)
 
 **Preview can reset.** Midnight relaunched Preview as a new chain on 7 November 2026, wiping contracts, balances and history from the old chain. Treat anything deployed there as disposable, and be ready to fund, register DUST and redeploy again if it happens. See [Networks and environments](https://docs.midnight.network/guides/networks-and-environments) and [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9).
-
-To deploy once the test wallet has tNIGHT from the [Preview faucet](https://midnight-tmnight-preview.nethermind.dev/) (browser captcha; the token is tNIGHT, also written tNight on the faucet page): see [`deployments/preview.json`](deployments/preview.json).
 
 ## Testnet and audit status
 

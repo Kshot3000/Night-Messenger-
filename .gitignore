@@ -30,3 +30,6 @@ secrets/
 # Self-hosted indexer data and generated secrets (scripts/local-indexer)
 scripts/local-indexer/data/
 scripts/local-indexer/.env
+
+# Wallet / private-state LevelDB written by local Preview/Preprod drills
+contracts/midnight-level-db/

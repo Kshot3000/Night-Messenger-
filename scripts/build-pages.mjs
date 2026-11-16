@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+// Publish the Preview deployment record with the static site so /verify can
+// show the live test contract (no secrets).
+mkdirSync("apps/web/public", { recursive: true });
+copyFileSync(
+  path.join("deployments", "preview.json"),
+  path.join("apps/web", "public", "preview.json"),
+);
 
 const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const result = spawnSync(
