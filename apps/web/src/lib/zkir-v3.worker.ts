@@ -9,8 +9,13 @@
  * @midnightntwrk/zkir-v3, the same engine midnight-js testkit uses for 0.36
  * circuits. Witnesses never leave this browser tab.
  */
-import { provingProvider } from "@midnightntwrk/zkir-v3";
 import { SRS_PARAM_SHA256, srsParamFileName } from "./zk-params";
+
+// Load the WASM engine lazily: the message listener below must be installed
+// synchronously, or a request posted while the module is still instantiating
+// is dropped and the caller waits forever.
+let engine: Promise<typeof import("@midnightntwrk/zkir-v3")> | undefined;
+const loadEngine = () => (engine ??= import("@midnightntwrk/zkir-v3"));
 
 type KeyMaterial = { proverKey: Uint8Array; verifierKey: Uint8Array; ir: Uint8Array };
 export type ProverRequest = {
@@ -57,6 +62,7 @@ const scope = self as unknown as DedicatedWorkerGlobalScope;
 scope.onmessage = async (event: MessageEvent<ProverRequest>) => {
   const r = event.data;
   try {
+    const { provingProvider } = await loadEngine();
     const pp = provingProvider({
       lookupKey: async (location: string) => (location === r.keyLocation ? r.keyMaterial : undefined),
       getParams: (k: number) => getParams(r.paramsBase, k),
