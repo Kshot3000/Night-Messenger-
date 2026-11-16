@@ -1,0 +1,46 @@
+{
+  "version": { "major": 3, "minor": 1 },
+  "do_communications_commitment": true,
+  "inputs": [
+    { "name": "%inboxId.0", "type": "Scalar<BLS12-381>" },
+    { "name": "%inboxId.1", "type": "Scalar<BLS12-381>" }
+  ],
+  "outputs": [
+  ],
+  "instructions": [
+    { "op": "constrain_bits", "val": "%inboxId.0", "bits": 8 },
+    { "op": "constrain_bits", "val": "%inboxId.1", "bits": 248 },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%t.2", "guard": null },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x30"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x50", "0x01", "0x01", "0x00"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x10", "0x01", "0x01", "0x20", "%inboxId.0", "%inboxId.1"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x18"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x0d", "0x01", "0x01", "%t.2"] },
+    { "op": "assert", "cond": "%t.2" },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.3", "guard": null },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.4", "guard": null },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.5", "guard": null },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.6", "guard": null },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.7", "guard": null },
+    { "op": "public_input", "type": "Scalar<BLS12-381>", "output": "%box.8", "guard": null },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x30"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x50", "0x01", "0x01", "0x00"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x50", "0x01", "0x20", "%inboxId.0", "%inboxId.1"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x0c", "0x04", "0x20", "0x20", "0x04", "0x01", "%box.3", "%box.4", "%box.5", "%box.6", "%box.7", "%box.8"] },
+    { "op": "private_input", "type": "Scalar<BLS12-381>", "output": "%sk.9", "guard": null },
+    { "op": "constrain_bits", "val": "%sk.9", "bits": 8 },
+    { "op": "private_input", "type": "Scalar<BLS12-381>", "output": "%sk.10", "guard": null },
+    { "op": "constrain_bits", "val": "%sk.10", "bits": 248 },
+    { "op": "persistent_hash", "output": "%bytes.11", "alignment": [{ "tag": "atom", "value": { "length": 32, "tag": "bytes" } }, { "tag": "atom", "value": { "length": 32, "tag": "bytes" } }], "inputs": ["0x00", "0x6e6d3a6f776e65723a7631", "%sk.9", "%sk.10"] },
+    { "op": "bytes_into_natives", "outputs": ["%t.12", "%t.13"], "bytes": "%bytes.11" },
+    { "op": "test_eq", "output": "%t.14", "a": "%t.13", "b": "%box.3" },
+    { "op": "test_eq", "output": "%t.15", "a": "%t.12", "b": "%box.4" },
+    { "op": "cond_select", "output": "%t.16", "bit": "%t.14", "a": "%t.15", "b": "0x00" },
+    { "op": "assert", "cond": "%t.16" },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x70", "0x01", "0x01", "0x00"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x10", "0x01", "0x01", "0x20", "%inboxId.0", "%inboxId.1"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x11", "0x01", "0x04", "0x20", "0x20", "0x04", "0x01", "%box.3", "%box.4", "%box.5", "%box.6", "%box.7", "0x00"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0x91"] },
+    { "op": "impact", "guard": "0x01", "inputs": ["0xa1"] }
+  ]
+}
