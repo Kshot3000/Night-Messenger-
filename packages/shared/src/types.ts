@@ -45,6 +45,8 @@ export interface WalletSession {
   rdns?: string;
   addressPreview?: string;
   shieldedAddress?: string;
+  unshieldedAddress?: string;
+  networkId?: string;
   apiVersion?: string;
   error?: string;
 }

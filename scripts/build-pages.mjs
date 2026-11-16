@@ -10,6 +10,11 @@ copyFileSync(
   path.join("apps/web", "public", "preview.json"),
 );
 
+const copyZk = spawnSync(process.execPath, [path.join("scripts", "copy-zk-assets.mjs")], {
+  stdio: "inherit",
+});
+if (copyZk.status !== 0) process.exit(copyZk.status || 1);
+
 const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const result = spawnSync(
   command,

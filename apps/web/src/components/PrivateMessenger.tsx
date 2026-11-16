@@ -22,9 +22,12 @@ import {
 } from "@midnight-messenger/shared";
 import { Brand } from "./Brand";
 import { Icon } from "./Icon";
+import { ConnectWalletButton } from "./ConnectWalletButton";
 import { DEFAULT_RELAY, RELAY_KEY, addContact, addMessage, emptyState, isRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
 import { CHAIN_KEY, DEFAULT_CHAIN, chainRisk, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
+import { decodePreviewReceipt, previewInboxExists, type PreviewDecodedReceipt } from "@/lib/preview-receipt";
+import { useWallet } from "@/hooks/useWallet";
 
 type Boot = "loading" | "unsupported" | "setup" | "ready";
 const POLL_MS = 3000;
@@ -52,6 +55,9 @@ export function PrivateMessenger() {
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [acking, setAcking] = useState<string | null>(null);
+  const { session, api } = useWallet();
+  const previewMode = session.status === "connected" && !!api;
   const keyRef = useRef<CryptoKey | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -101,7 +107,9 @@ export function PrivateMessenger() {
     let stop = false;
     const ping = async () => {
       const r = await fetch(`${relay.replace(/\/$/, "")}/health`).then((x) => x.ok).catch(() => false);
-      const c = await chainHealth(chain).catch(() => null);
+      const c = previewMode
+        ? { ok: true, proving: true }
+        : await chainHealth(chain).catch(() => null);
       if (!stop) {
         setRelayOk(r);
         setChainInfo(c ? { ok: true, proving: !!c.proving } : { ok: false, proving: false });
@@ -113,7 +121,7 @@ export function PrivateMessenger() {
       stop = true;
       clearInterval(t);
     };
-  }, [boot, relay, chain]);
+  }, [boot, relay, chain, previewMode]);
 
   // ---------------------------------------------------------- receive
   const poll = useCallback(async () => {
@@ -173,6 +181,14 @@ export function PrivateMessenger() {
     for (const [mailbox, list] of Object.entries(s.threads)) {
       for (const m of list.slice(-30)) {
         try {
+          if (previewMode) {
+            const rc: PreviewDecodedReceipt = await decodePreviewReceipt(m.commitment);
+            if (rc.posted && (rc.receipts !== m.chain?.receipts || !m.chain?.posted)) {
+              s = updateMessage(s, mailbox, m.commitment, { chain: { ...m.chain, posted: true, seq: rc.seq, receipts: rc.receipts } });
+              changed = true;
+            }
+            continue;
+          }
           let rc = await chainReceipt(chain, m.commitment);
           if (m.dir === "in" && rc.posted && !m.chain?.acked) {
             rc = (await chainAck(chain, { sk: toHex(me.chainSecret), commitment: m.commitment }).catch((e: Error) => {
@@ -191,7 +207,7 @@ export function PrivateMessenger() {
       }
     }
     if (changed) await commit(s);
-  }, [me, chain, chainInfo, commit]);
+  }, [me, chain, chainInfo, commit, previewMode]);
 
   useEffect(() => {
     if (boot !== "ready") return;
@@ -200,24 +216,54 @@ export function PrivateMessenger() {
   }, [boot, syncChain]);
 
   // ---------------------------------------------------------- send
+  async function ackOnPreview(mailbox: string, commitment: string) {
+    if (!me || !api || acking) return;
+    const contact = stateRef.current.contacts.find((c) => c.mailbox === mailbox);
+    setAcking(commitment);
+    try {
+      let inbox: string | undefined;
+      if (contact) {
+        const dm = await dmInboxes(me, contact);
+        inbox = (await previewInboxExists(toHex(dm.theirs)).catch(() => false)) ? toHex(dm.theirs) : toHex(dm.mine);
+      }
+      const { previewAck } = await import("@/lib/preview-contract");
+      const rc = await previewAck({ api, me, commitment, inbox });
+      await commit(updateMessage(stateRef.current, mailbox, commitment, {
+        chain: { posted: true, seq: rc.seq, receipts: rc.receipts, acked: true },
+      }));
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setAcking(null);
+    }
+  }
+
   async function send() {
     const contact = state.contacts.find((c) => c.mailbox === active);
     const body = draft.trim();
     if (!me || !contact || !body || busy) return;
-    if (!relayOk) return setNotice(`Relay ${relay} is offline. Start it with: pnpm relay`);
+    if (!relayOk && !previewMode) return setNotice(`Relay ${relay} is offline. Start it with: pnpm relay`);
     setBusy(true);
     try {
       // Reuse the DM inbox the contact created, if any; otherwise use (and later create) ours.
       const dm = await dmInboxes(me, contact);
-      const theirsExists = chainInfo?.ok ? await chainInbox(chain, toHex(dm.theirs)).then((r) => r.exists).catch(() => false) : false;
+      const theirsExists = previewMode
+        ? await previewInboxExists(toHex(dm.theirs)).catch(() => false)
+        : chainInfo?.ok
+          ? await chainInbox(chain, toHex(dm.theirs)).then((r) => r.exists).catch(() => false)
+          : false;
       const inbox = theirsExists ? dm.theirs : dm.mine;
       const s = await seal(me, contact, body, { inbox });
-      const up = await fetch(`${relay.replace(/\/$/, "")}/v1/mailboxes/${contact.mailbox}/messages`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ envelope: toB64u(s.envelope) }),
-      });
-      if (!up.ok) throw new Error(`relay refused the envelope (${up.status})`);
+      if (relayOk) {
+        const up = await fetch(`${relay.replace(/\/$/, "")}/v1/mailboxes/${contact.mailbox}/messages`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ envelope: toB64u(s.envelope) }),
+        });
+        if (!up.ok) throw new Error(`relay refused the envelope (${up.status})`);
+      } else if (previewMode) {
+        setNotice("No reachable ciphertext relay; the envelope is stored only in this browser. The commitment can still be posted on Preview.");
+      }
       const commitment = toHex(s.commitment);
       let next = addMessage(stateRef.current, contact.mailbox, {
         id: s.payload.id,
@@ -233,7 +279,29 @@ export function PrivateMessenger() {
       });
       setDraft("");
       await commit(next);
-      if (chainInfo?.ok) {
+      if (previewMode && api) {
+        try {
+          setNotice("Approve the Lace prompts. The first message may also create the inbox and add both members.");
+          const { previewSend } = await import("@/lib/preview-contract");
+          const rc = await previewSend({
+            api,
+            me,
+            contact,
+            inbox,
+            seed: dm.seed,
+            create: !theirsExists,
+            commitment,
+            blind: s.payload.blind,
+            members: [toHex(me.member), contact.member],
+          });
+          next = updateMessage(stateRef.current, contact.mailbox, commitment, {
+            chain: { posted: rc.posted, seq: rc.seq, receipts: rc.receipts },
+          });
+        } catch (e) {
+          next = updateMessage(stateRef.current, contact.mailbox, commitment, { chain: { posted: false, error: (e as Error).message } });
+        }
+        await commit(next);
+      } else if (chainInfo?.ok) {
         try {
           const r = await chainSend(chain, { sk: toHex(me.chainSecret), blind: s.payload.blind, seed: theirsExists ? undefined : toHex(dm.seed), inboxId: toHex(inbox), commitment, members: [toHex(me.member), contact.member] });
           const proof = r.txs.find((t) => t.circuit === "postEnvelope")?.proof;
@@ -272,11 +340,22 @@ export function PrivateMessenger() {
       <header className="pm-top">
         <Link href="/" aria-label={`${PRODUCT.name} home`}><Brand /></Link>
         <div className="pm-status" aria-live="polite">
+          <ConnectWalletButton />
           <span className={`pm-dot ${relayOk ? "ok" : "off"}`} /> relay {relayOk ? "online" : relayOk === null ? "…" : "offline"}
-          <span className={`pm-dot ${chainInfo?.ok ? "ok" : "off"}`} /> chain {chainInfo?.ok ? (chainInfo.proving ? "sim + real ZK proofs" : "sim, no proofs") : "offline"}
+          <span className={`pm-dot ${previewMode || chainInfo?.ok ? "ok" : "off"}`} /> {previewMode ? "Preview (Lace)" : chainInfo?.ok ? (chainInfo.proving ? "sim + real ZK proofs" : "sim, no proofs") : "chain offline"}
         </div>
       </header>
-      {chainRisk(chain) !== "local" && (
+      <p className="pm-notice" role="status">
+        Midnight Preview testnet, unaudited, can reset. Connect the Lace desktop extension to post and acknowledge on the live contract.
+        Phones cannot connect Lace.
+      </p>
+      {previewMode && (
+        <p className="pm-notice" role="status">
+          Lace will approve each on-chain call. Incoming receipts are not acknowledged automatically — use Acknowledge delivery.
+          Proving uses Lace Settings → Midnight (try Remote first if listed; otherwise run proof server 9.0.0 locally). A remote prover can read your member secret.
+        </p>
+      )}
+      {!previewMode && chainRisk(chain) !== "local" && (
         <p className="pm-notice pm-danger" role="alert">
           WARNING: the chain URL {chain} is not localhost. The chain simulator receives your member secret in plain JSON and must never be hosted.
           {chainRisk(chain) === "refuse" ? " This production build refuses to send it there." : " Development build: requests are still sent. Do not use this with real identities."}
@@ -317,7 +396,17 @@ export function PrivateMessenger() {
                 </div>
               </div>
               <ol className="pm-messages">
-                {thread.map((m) => <Bubble key={m.commitment} m={m} />)}
+                {thread.map((m) => (
+                  <Bubble
+                    key={m.commitment}
+                    m={m}
+                    previewMode={previewMode}
+                    acking={acking === m.commitment}
+                    onAck={m.dir === "in" && previewMode && m.chain?.posted && !m.chain?.acked && contact
+                      ? () => void ackOnPreview(contact.mailbox, m.commitment)
+                      : undefined}
+                  />
+                ))}
                 {!thread.length && <li className="pm-muted pm-small">No messages yet. The first one creates your shared inbox on-chain.</li>}
               </ol>
               <form className="pm-compose" onSubmit={(e) => { e.preventDefault(); void send(); }}>
@@ -334,7 +423,7 @@ export function PrivateMessenger() {
   );
 }
 
-function Bubble({ m }: { m: ChatMessage }) {
+function Bubble({ m, previewMode, acking, onAck }: { m: ChatMessage; previewMode?: boolean; acking?: boolean; onAck?: () => void }) {
   const [copied, setCopied] = useState(false);
   // Same shape as authorDisclosure(): enough for anyone to check this one message against the ledger.
   const disclosure = () => JSON.stringify({ commitment: m.commitment, member: m.member, blind: m.blind });
@@ -351,6 +440,11 @@ function Bubble({ m }: { m: ChatMessage }) {
           </Link>
         ) : (
           <span className="pm-muted" title={m.chain?.error}>{m.chain?.error ? `not on-chain: ${m.chain.error}` : m.dir === "out" ? "relay only" : "checking chain…"}</span>
+        )}
+        {previewMode && onAck && (
+          <button className="pm-link" disabled={acking} onClick={onAck}>
+            {acking ? "acknowledging…" : "Acknowledge delivery"}
+          </button>
         )}
         <span>{new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
         <button className="pm-link" onClick={async () => { await navigator.clipboard.writeText(disclosure()).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1500); }} title="Copy a bundle that proves who wrote this one message">
@@ -470,7 +564,8 @@ function Settings({ relay, chain, onRelay, onChain, onNotice }: { relay: string;
         onNotice("Saved.");
       }}>
         <label className="pm-label pm-small">Relay (ciphertext only)<input className="pm-input pm-mono" value={r} onChange={(e) => setR(e.target.value)} /></label>
-        <label className="pm-label pm-small">Chain (local simulator until Preprod)<input className="pm-input pm-mono" value={c} onChange={(e) => setC(e.target.value)} /></label>
+        <label className="pm-label pm-small">Chain simulator (used only when Lace is not connected)<input className="pm-input pm-mono" value={c} onChange={(e) => setC(e.target.value)} /></label>
+        <p className="pm-muted pm-small">A public relay is still required for the other person to receive ciphertext. This site does not host one; set a reachable relay, or both testers can use a local relay.</p>
         <button className="button button-outline button-small">Save</button>
       </form>
     </details>

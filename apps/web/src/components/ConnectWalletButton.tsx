@@ -8,6 +8,7 @@ import {
 import { useWallet } from "@/hooks/useWallet";
 import { Icon } from "./Icon";
 import { Modal } from "./Modal";
+
 export function ConnectWalletButton({
   className = "",
   onConnected,
@@ -40,19 +41,21 @@ export function ConnectWalletButton({
         <span>
           {session.status === "connected"
             ? session.walletName || "Wallet connected"
-            : "Connect wallet"}
+            : "Connect Lace"}
         </span>
       </button>
       {open && (
         <Modal
           title={
-            session.status === "connected" ? "Your wallet" : "Connect a wallet"
+            session.status === "connected" ? "Your wallet" : "Connect Lace"
           }
           onClose={() => setOpen(false)}
         >
           <p className="modal-description">
-            An optional connection to a compatible Midnight wallet on preprod.
-            Your chats remain a local demo.
+            Connect the Lace desktop extension on Midnight Preview to create or
+            join a DM inbox, post an envelope, and acknowledge delivery on the
+            live test contract. This network is unaudited and can reset. Phones
+            cannot connect Lace.
           </p>
           {session.status === "connected" ? (
             <>
@@ -62,6 +65,7 @@ export function ConnectWalletButton({
                 <code>
                   {session.addressPreview || "Connected for this session"}
                 </code>
+                <p className="field-help">Midnight Preview</p>
               </div>
               <p className="field-help">
                 Disconnecting here clears this app’s session. Manage site
@@ -95,7 +99,7 @@ export function ConnectWalletButton({
                       </span>
                       <span>
                         {safeWalletLabel(p.api)}
-                        <small>Midnight · Preprod</small>
+                        <small>Midnight · Preview</small>
                       </span>
                       {busy ? (
                         <span className="spinner" />
@@ -112,9 +116,9 @@ export function ConnectWalletButton({
                   </span>
                   <h3>No compatible wallet found.</h3>
                   <p>
-                    Open this site in a browser with a Midnight-compatible
-                    wallet extension enabled. You can keep exploring without
-                    one.
+                    Open this site in a desktop browser with the Lace extension
+                    enabled. Phones cannot connect Lace. You can keep exploring
+                    without a wallet; on-chain post and ack need one.
                   </p>
                   <button
                     className="button button-outline button-small"
@@ -134,8 +138,11 @@ export function ConnectWalletButton({
           <div className="modal-note">
             <Icon name="info" size={17} />
             <p>
-              Connecting a wallet does not enable encryption, live messaging, or
-              proofs in this preview.
+              Proving follows whatever you set in Lace under Settings → Midnight.
+              If Remote is listed, it is the least install (no Docker) but the
+              remote operator can read private proof inputs, including your
+              member secret. The private option is a local proof server 9.0.0 on
+              127.0.0.1:6300 with Local selected. See the README for sources.
             </p>
           </div>
         </Modal>

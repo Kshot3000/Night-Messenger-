@@ -33,3 +33,7 @@ scripts/local-indexer/.env
 
 # Wallet / private-state LevelDB written by local Preview/Preprod drills
 contracts/midnight-level-db/
+
+# ZK artifacts copied into the static site at Pages publish (prover keys are large)
+apps/web/public/zk/
+apps/web/src/generated/night_messenger/manifest-hash.ts

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { checkAuthorDisclosure, fromHex, PRODUCT, type AuthorDisclosure } from "@midnight-messenger/shared";
 import { CHAIN_KEY, DEFAULT_CHAIN, chainReceipt, chainSummary, type Receipt, type Usage } from "@/lib/chain-client";
 import { checkPreviewAckOnIndexer, loadPreviewRecord, type PreviewLiveCheck, type PreviewRecord } from "@/lib/preview-public";
+import { decodePreviewReceipt, type PreviewDecodedReceipt } from "@/lib/preview-receipt";
 
 const HEX32 = /^[0-9a-f]{64}$/;
 
@@ -21,6 +22,7 @@ export function ReceiptVerifier() {
   const [preview, setPreview] = useState<PreviewRecord | null>(null);
   const [previewLive, setPreviewLive] = useState<PreviewLiveCheck | null>(null);
   const [previewLiveError, setPreviewLiveError] = useState("");
+  const [liveSource, setLiveSource] = useState<PreviewDecodedReceipt["source"] | "snapshot" | null>(null);
 
   useEffect(() => {
     chainSummary(chain).then(setUsage).catch(() => setUsage(null));
@@ -65,15 +67,36 @@ export function ReceiptVerifier() {
     setError("");
     setReceipt(null);
     setAuthorship("");
+    setLiveSource(null);
     const c = commitment.trim().toLowerCase().replace(/^0x/, "");
     if (!HEX32.test(c)) return setError("A commitment is 64 hex characters.");
-    const testC = (preview?.verify?.commitment ?? preview?.commitment ?? "").replace(/^0x/, "").toLowerCase();
-    if (preview?.status === "deployed-drill-passed" && testC && c === testC) {
-      try {
-        const live = await checkPreviewAckOnIndexer(preview);
-        setPreviewLive(live);
-        setPreviewLiveError("");
+    try {
+      const decoded = await decodePreviewReceipt(c, { contractAddress: preview?.contractAddress ?? undefined });
+      setLiveSource(decoded.source);
+      setPreviewLiveError("");
+      setReceipt({
+        commitment: decoded.commitment,
+        posted: decoded.posted,
+        inboxId: decoded.inboxId,
+        authorTag: decoded.authorTag,
+        seq: decoded.seq,
+        receipts: decoded.receipts ?? "0",
+      });
+      if (preview) {
+        try {
+          setPreviewLive(await checkPreviewAckOnIndexer(preview));
+        } catch (e) {
+          setPreviewLiveError((e as Error).message);
+        }
+      }
+      return;
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPreviewLiveError(msg);
+      const testC = (preview?.verify?.commitment ?? preview?.commitment ?? "").replace(/^0x/, "").toLowerCase();
+      if (preview?.status === "deployed-drill-passed" && testC && c === testC) {
         const v = preview.verify ?? {};
+        setLiveSource("snapshot");
         setReceipt({
           commitment: c,
           posted: true,
@@ -82,20 +105,15 @@ export function ReceiptVerifier() {
           seq: v.seq,
           receipts: v.acks ?? preview.check?.acks ?? "1",
         });
-        if (!live.ackDeliveryPresent) {
-          setError("The published Preview ackDelivery transaction was not found on the indexer. Preview may have reset.");
-        }
-        return;
-      } catch (e) {
-        setPreviewLiveError((e as Error).message);
-        setError(`Could not reach the Preview indexer: ${(e as Error).message}`);
+        setError(`Could not decode live Preview state (${msg}). Showing the published drill snapshot.`);
         return;
       }
-    }
-    try {
-      setReceipt(await chainReceipt(chain, c));
-    } catch (e) {
-      setError(`Could not reach the chain at ${chain}: ${(e as Error).message}`);
+      try {
+        setReceipt(await chainReceipt(chain, c));
+        setLiveSource(null);
+      } catch (e2) {
+        setError(`Could not decode this commitment on Preview (${msg}) or reach the local simulator at ${chain}: ${(e2 as Error).message}`);
+      }
     }
   }, [commitment, chain, preview]);
 
@@ -151,8 +169,8 @@ export function ReceiptVerifier() {
             <p className="pm-muted pm-small">
               Test commitment <span className="pm-mono">{preview.commitment}</span>
               {preview.check?.acks != null && <> · {preview.check.acks} delivery receipt (from the Preview deploy drill)</>}
-              . The form below still talks to a local chain simulator unless you point it at one; this Preview receipt is
-              verified against the public Preview indexer and the published drill record.
+              . Lookups decode the live Preview contract state (ack counts for any new commitment, not only this drill).
+              Preview is a testnet, unaudited, and can reset.
             </p>
           )}
         </div>
@@ -164,7 +182,10 @@ export function ReceiptVerifier() {
       <details className="pm-details">
         <summary>Chain endpoint</summary>
         <input className="pm-input pm-mono" value={chain} onChange={(e) => setChain(e.target.value)} aria-label="Chain endpoint" />
-        <p className="pm-muted pm-small">Local chain simulator today (runs the real compiled contract). Midnight Preprod indexer once deployed.</p>
+        <p className="pm-muted pm-small">
+          Receipts are decoded from the live Midnight Preview contract first. This simulator endpoint is only a fallback
+          for local development. Preview is unaudited and can reset.
+        </p>
       </details>
       {usage && (
         <p className="pm-muted pm-small" aria-label="Network totals">
@@ -179,6 +200,12 @@ export function ReceiptVerifier() {
           <div className="pm-receipt-big">
             <span>{receipt.receipts}</span> delivery receipt{receipt.receipts === "1" ? "" : "s"}
           </div>
+          {liveSource === "preview-ledger" && (
+            <p className="pm-muted pm-small">Decoded from the live Preview ledger.</p>
+          )}
+          {liveSource === "snapshot" && (
+            <p className="pm-muted pm-small">From the published Preview drill snapshot (live decode failed).</p>
+          )}
           <dl>
             <dt>Posted by</dt>
             <dd>a verified member of the inbox (ZK membership proof; which member stays hidden)</dd>

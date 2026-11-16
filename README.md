@@ -10,7 +10,7 @@ Night Messenger is an open-source messenger for the [Midnight](https://midnight.
 
 > ⚠️ **Testnet only. Not audited.** The contract and encryption code have not had a security review. Use test identities and sample content only.
 >
-> **Status (Nov 2026, Wave 3 build):** encryption, relay delivery, the Compact contract and its ZK proofs all work locally. The web demo's "chain" is a **local chain simulator** that runs the real compiled contract (and, with a proof server, real proofs). **The contract is not yet deployed to Midnight Preprod**; see [Preprod status](#preprod-status).
+> **Status (Nov 2026, Wave 3 build):** encryption, relay delivery, the Compact contract and its ZK proofs all work locally. The contract is **deployed on Midnight Preview** (disposable testnet, unaudited, can reset). The hosted app can connect the Lace desktop extension to post and acknowledge on that contract. The contract is **not yet deployed to Midnight Preprod**; see [Preview status](#preview-status) and [Preprod status](#preprod-status).
 
 [Live site (static pages)](https://kshot3000.github.io/Night-Messenger-/) · [X: @kshot9000](https://x.com/kshot9000) · [Privacy model](#privacy-model) · [What changed this Wave](#what-changed-this-wave)
 
@@ -64,8 +64,9 @@ sequenceDiagram
 | Anonymous sender, recipient verification, per-message authorship disclosure | ✅ |
 | Public receipt check (`/verify`) | ✅ against the local chain simulator |
 | Usage counts (registrations, envelopes, receipts) | ✅ ledger counters, shown on `/verify` and via `pnpm stats` |
+| Midnight Preview deployment | ✅ live on Preview (disposable; can reset) — [Preview status](#preview-status) |
 | Midnight Preprod deployment | ❌ not yet: needs a funded Preprod wallet ([below](#preprod-status)) |
-| Lace wallet signing from the browser | ❌ next phase (wallet detection exists) |
+| Lace wallet signing from the browser | ✅ Preview path in `/private` (desktop Lace; not tested in this environment) |
 | First message free via DUST sponsorship | ❌ stretch goal, not started |
 
 The older sample messenger at `/app` (search, pins, reactions, backup) is still a **local, unencrypted preview** with demo data and is labelled as such.
@@ -164,7 +165,7 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 **Known limits:**
 
 - **Metadata at the relay.** The relay sees the recipient's mailbox id (a hash of their public key), envelope sizes, timing and IP addresses. Use Tor or a VPN if that matters. It keeps no request log.
-- **Chain simulator trust.** The local simulator, like Midnight's proof server, receives your private circuit inputs to run the circuit, so it must run on your own machine (it binds to 127.0.0.1). On Preprod those inputs go only to your local proof server.
+- **Chain simulator trust.** The local simulator, like Midnight's proof server, receives your private circuit inputs to run the circuit, so it must run on your own machine (it binds to 127.0.0.1). On Preview, those inputs go to whatever proof server Lace is configured to use (Local on your machine, or Remote if you select it — see above).
 - **Small sets.** With few members, "one of the members" hides little. Receipts are capped at one per member, but a sender can also acknowledge their own message.
 - **No forward secrecy** if a recipient's long-term key leaks later; single device, manual backup; no audit.
 - **Invite exchange** is manual (copy/paste); verify invites out of band.
@@ -191,6 +192,28 @@ Deployed on Midnight Preview (ledger 9) as a disposable test. The Wave 3 entry s
 
 **Preview can reset.** Midnight relaunched Preview as a new chain on 7 November 2026, wiping contracts, balances and history from the old chain. Treat anything deployed there as disposable, and be ready to fund, register DUST and redeploy again if it happens. See [Networks and environments](https://docs.midnight.network/guides/networks-and-environments) and [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9).
 
+### Try it with Lace (desktop)
+
+The hosted app is at [https://kshot3000.github.io/Night-Messenger-/](https://kshot3000.github.io/Night-Messenger-/). Open **Private chat**, create a local identity, connect the **Lace desktop extension** on the Midnight **Preview** network, and fund that wallet with tNIGHT / tDust from the Preview faucet. You can then create or join a DM inbox, post an envelope, and click **Acknowledge delivery** against the contract above. `/verify` decodes live Preview ledger state for any commitment (not only the drill below).
+
+Phones cannot connect Lace. A public ciphertext relay is not bundled with this Pages site; without a reachable relay the other person will not receive the message body, but the commitment can still be posted on-chain.
+
+**Proof server — can a tester prove without running Docker?**
+
+The app asks Lace for `getProvingProvider()` and uses whatever the wallet is configured to use. If that method is missing, it falls back to a local proof server at `http://localhost:6300`.
+
+(a) **Lace Settings → Midnight.** [IOHK Support](https://iohk.zendesk.com/hc/en-us/articles/57817798524313-How-do-I-set-up-a-proof-server-for-Midnight-transactions) documents two options: **Local** (your own proving service, typically Docker) and **Remote** ("trusted remote proof server", "recommended for most users"). Remote shows only servers Lace already lists; there is no field to type a custom address. Midnight's own [install guide](https://docs.midnight.network/getting-started/installation) and [Proving transactions locally](https://docs.midnight.network/guides/local-proving) (written against Lace 2.4.2) still say Local at `http://localhost:6300` is the only settings choice. This repository cannot open a current Lace UI, so testers should look at their own Settings → Midnight. If Remote is listed, it is the least-install path (no Docker). If it is missing or proving fails, run proof server 9.0.0 locally:
+
+```bash
+docker run --rm -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:9.0.0
+```
+
+Then set Lace to **Local** and retry. Bind only to 127.0.0.1; the proof server has no authentication or TLS.
+
+(b) **A proof server we host.** We are not running one. GitHub Pages is static, testers cannot point Lace Remote at a custom URL, and a remote prover sees private inputs in the clear: this contract's member secret `sk`, Merkle path and author `blind`, plus the wallet's shielded coin keys and DUST secret key when the wallet also proves fees there ([Proving transactions locally](https://docs.midnight.network/guides/local-proving), [MPS-0004](https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/mps/mps-0004-trusted-proof-serving.md)). The Midnight Foundation does not recommend remote proving outside a trusted execution environment. We will not add a DApp setting that sends those witnesses to a server we operate.
+
+**Privacy tradeoff of the least-install path:** Lace Remote, when it is available, avoids Docker, but whoever operates (or compromises) that remote server can read the private inputs above and could impersonate that inbox member or spend those coins. The private path is Local + Docker 9.0.0 on your machine.
+
 ## Testnet and audit status
 
 - Local demo, optional Midnight Preview, and (planned) Midnight Preprod only. No mainnet deployment.
@@ -208,7 +231,7 @@ Several teams are building private messaging on Midnight, and we think that's go
 
 ## Roadmap
 
-**Wave 3 (target Nov 25, 2026):** deploy to Preprod, switch `/verify` and `/private` from the simulator to Lace + proof server + indexer, demo video. Stretch: first message free via DUST sponsorship.
+**Wave 3 (target Nov 25, 2026):** Preview deploy and Lace path for `/private` and `/verify` are in this build (desktop Lace still needs a real-extension test). Preprod deploy and a demo video remain. Stretch: first message free via DUST sponsorship.
 
 **Next:** tester round, security review, multi-device keys and recovery, group inboxes in the UI (the contract already supports them), Android app via Capacitor, mainnet only after an audit.
 
@@ -225,7 +248,7 @@ Several teams are building private messaging on Midnight, and we think that's go
 - In-browser E2EE with keys sealed at rest (folding in the useful parts of the earlier [Nocturne](https://github.com/Kshot3000/nocturne) preview: device-key sealing and passphrase wrapping).
 - Ciphertext-only relay, local chain simulator, `/private` and `/verify` pages, terminal demo.
 - Apache-2.0 for the new Midnight code.
-- Not yet: Preprod deployment, Lace signing, DUST sponsorship, tester round.
+- Not yet: Preprod deployment, a confirmed real-Lace tester run, DUST sponsorship.
 
 ---
 

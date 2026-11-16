@@ -12,11 +12,11 @@ const faqs = [
   ],
   [
     "Are my messages encrypted or sent to other people?",
-    "In Private chat, yes: messages are end-to-end encrypted in your browser (X25519 + AES-256-GCM), delivered through a relay that only sees ciphertext, and each message gets an on-chain commitment and a checkable delivery receipt (local chain simulator today; Midnight Preprod next). The sample /app preview is different: it stores readable demo data locally and sends nothing. Testnet only, not audited.",
+    "In Private chat, yes: messages are end-to-end encrypted in your browser (X25519 + AES-256-GCM), delivered through a relay that only sees ciphertext, and each message gets an on-chain commitment and a checkable delivery receipt (Midnight Preview today with desktop Lace; Preprod is next). Preview is a testnet, unaudited, and can reset. The sample /app preview is different: it stores readable demo data locally and sends nothing. Testnet only, not audited.",
   ],
   [
     "What is selective disclosure?",
-    "Proving one fact without revealing the rest. In Night Messenger a sender proves they are a member of the conversation without saying which member, and either side can later prove who wrote one specific message. Read receipts are in testing and unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. The Compact contract and its zero-knowledge proofs run today against a local proof server; a Preview or Preprod deployment is next.",
+    "Proving one fact without revealing the rest. In Night Messenger a sender proves they are a member of the conversation without saying which member, and either side can later prove who wrote one specific message. Read receipts are in testing and unaudited: outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. The Compact contract is deployed on Midnight Preview. Desktop Lace can sign post and ack transactions; receipts are in testing and unaudited, and Preview can reset.",
   ],
   [
     "What happens to my demo conversations?",
@@ -245,7 +245,7 @@ export default function LandingPage() {
                 <strong>Verified, but anonymous.</strong> Private chat now
                 encrypts end to end, delivers through a ciphertext-only relay
                 and records delivery receipts (in testing, unaudited: in a 1:1
-                chat the sender knows who acknowledged). A Preview or Preprod
+                chat the sender knows who acknowledged). A Preview (live, can reset) or Preprod
                 deployment is next; testnet only, not audited.
               </p>
               <Link href="/security">

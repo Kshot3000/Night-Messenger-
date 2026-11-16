@@ -81,9 +81,57 @@ importers:
       '@midnight-messenger/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@midnight-ntwrk/compact-runtime':
+        specifier: 0.21.0
+        version: 0.21.0
+      '@midnight-ntwrk/midnight-js-contracts':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-dapp-connector-proof-provider':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-fetch-zk-config-provider':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-http-client-proof-provider':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-indexer-public-data-provider':
+        specifier: 5.0.0
+        version: 5.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@midnight-ntwrk/midnight-js-level-private-state-provider':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-protocol':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-types':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnight-ntwrk/midnight-js-utils':
+        specifier: 5.0.0
+        version: 5.0.0
+      '@midnightntwrk/dapp-connector-api':
+        specifier: 4.1.0
+        version: 4.1.0
+      '@midnightntwrk/ledger-v9':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@midnightntwrk/onchain-runtime-v4':
+        specifier: 4.0.0
+        version: 4.0.0
+      buffer:
+        specifier: 6.0.3
+        version: 6.0.3
+      events:
+        specifier: 3.3.0
+        version: 3.3.0
       geist:
         specifier: 1.7.2
         version: 1.7.2(next@15.5.27(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))
+      level:
+        specifier: 10.0.0
+        version: 10.0.0
       next:
         specifier: 15.5.27
         version: 15.5.27(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1379,6 +1427,14 @@ packages:
 
   '@midnight-ntwrk/midnight-js-contracts@5.0.0':
     resolution: {integrity: sha512-zh4XVEMjzuQ31xSv6PLHCcHZ9UigUfsSYAMvNWJt5lAKdQp8fZBQu93Yy04QIocKChdu/4lw1Hm03kOGHJty4A==}
+    engines: {node: '>=22.12'}
+
+  '@midnight-ntwrk/midnight-js-dapp-connector-proof-provider@5.0.0':
+    resolution: {integrity: sha512-Jk/eeKRnhRJ8cYNaL01f/V+mm2f18etwxTNZ2JrdSSAm4U3rdGAqUa65qzyKD5e4phXohKOLkB0eqDtwVeA+Xg==}
+    engines: {node: '>=22.12'}
+
+  '@midnight-ntwrk/midnight-js-fetch-zk-config-provider@5.0.0':
+    resolution: {integrity: sha512-S3C76aceRo8FDHe66QaZWjMO+K1snMWnhNlsXsBCx7ljy65Cg3LGGKz3AhV1++YKx56Qv3cQ34NUc4DyW/h1ww==}
     engines: {node: '>=22.12'}
 
   '@midnight-ntwrk/midnight-js-http-client-proof-provider@5.0.0':
@@ -7873,6 +7929,21 @@ snapshots:
       '@midnight-ntwrk/midnight-js-types': 5.0.0
       '@midnight-ntwrk/midnight-js-utils': 5.0.0
       effect: 3.22.4
+
+  '@midnight-ntwrk/midnight-js-dapp-connector-proof-provider@5.0.0':
+    dependencies:
+      '@midnight-ntwrk/midnight-js-protocol': 5.0.0
+      '@midnight-ntwrk/midnight-js-types': 5.0.0
+      '@midnight-ntwrk/midnight-js-utils': 5.0.0
+      '@midnightntwrk/dapp-connector-api': 4.1.0
+
+  '@midnight-ntwrk/midnight-js-fetch-zk-config-provider@5.0.0':
+    dependencies:
+      '@midnight-ntwrk/midnight-js-types': 5.0.0
+      '@midnight-ntwrk/midnight-js-utils': 5.0.0
+      cross-fetch: 4.1.0
+    transitivePeerDependencies:
+      - encoding
 
   '@midnight-ntwrk/midnight-js-http-client-proof-provider@5.0.0':
     dependencies:
