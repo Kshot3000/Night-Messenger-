@@ -1,0 +1,10 @@
+{
+  "network": "preprod",
+  "status": "credential-blocked",
+  "siteOrigin": null,
+  "sitePath": "",
+  "relayOrigin": null,
+  "relayMode": "durable",
+  "indexerOrigin": null,
+  "deploymentRecord": "deployments/preprod.json"
+}

@@ -1,0 +1,10 @@
+{
+  "network": "preview",
+  "status": "preview-beta",
+  "siteOrigin": "https://kshot3000.github.io",
+  "sitePath": "/Night-Messenger-",
+  "relayOrigin": null,
+  "relayMode": "published-demo",
+  "indexerOrigin": "https://indexer.preview.midnight.network",
+  "deploymentRecord": "deployments/preview.json"
+}

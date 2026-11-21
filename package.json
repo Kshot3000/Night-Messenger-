@@ -12,6 +12,8 @@
     "lint": "pnpm --filter @midnight-messenger/web lint",
     "typecheck": "pnpm --filter @midnight-messenger/shared typecheck && pnpm --filter @midnight-messenger/web typecheck",
     "build:pages": "node scripts/build-pages.mjs",
+    "build:release": "node scripts/build-release.mjs",
+    "drill:preprod": "node scripts/preprod-drill.mjs",
     "test": "node --experimental-strip-types --test apps/web/tests/*.test.mjs packages/shared/tests/*.test.mjs apps/relay/test/*.test.mjs",
     "format": "prettier --write apps/web/src packages/shared/src packages/shared/tests apps/web/tests",
     "relay": "node apps/relay/server.mjs",
