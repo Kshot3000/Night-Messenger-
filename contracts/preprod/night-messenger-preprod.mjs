@@ -92,10 +92,15 @@ const RECORD = process.env.NM_PUBLIC_RECORD ?? "";
 const E2EE = process.env.NM_E2EE ?? path.resolve(OUT, "../../../../packages/shared/src/e2ee.ts");
 const DRY = process.argv.includes("--dry-run");
 
-const redact = (s) =>
-  String(s?.stack ?? s)
+const redact = (s) => {
+  let safe = String(s?.stack ?? s)
     .replace(/([?&]project_id=)[^&\s"']*/g, "$1…")
     .replace(/nightpreprod[A-Za-z0-9]+/g, "nightpreprod…");
+  for (const secret of [BF, process.env.MIDNIGHT_WALLET_SEED, process.env.MIDNIGHT_WALLET_MNEMONIC, process.env.PRIVATE_STATE_PASSWORD]) {
+    if (secret?.trim()) safe = safe.replaceAll(secret.trim(), "[redacted]");
+  }
+  return safe;
+};
 const log = (...a) => console.error(new Date().toISOString(), ...a.map(redact));
 const logger = { info: (...a) => log(...a), warn: (...a) => log(...a), error: (...a) => log(...a), debug: () => {} };
 const hex = (b) => Buffer.from(b).toString("hex");

@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { WalletProvider } from "@/hooks/useWallet";
+import { BuildFingerprint } from "@/components/BuildFingerprint";
 
 /** Live GitHub Pages URL (repo name includes trailing hyphen). */
 const siteUrl = (
@@ -23,6 +24,9 @@ export const metadata: Metadata = {
   description:
     "A calmer messaging experience for the Midnight ecosystem. Explore a free, open-source local preview.",
   applicationName: "Night Messenger",
+  ...(process.env.NEXT_PUBLIC_NM_RELEASE_TARGET === "preview" ? {} : {
+    robots: { index: false, follow: false },
+  }),
   authors: [{ name: "Kshot", url: "https://github.com/Kshot3000" }],
   keywords: [
     "Midnight",
@@ -85,6 +89,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <WalletProvider>{children}</WalletProvider>
+        <BuildFingerprint />
       </body>
     </html>
   );

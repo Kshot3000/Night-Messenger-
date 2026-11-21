@@ -1,10 +1,20 @@
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import { buildFingerprint, previewBuildFingerprint, readReleaseTarget } from "../../scripts/release-identity.mjs";
 
 const require = createRequire(import.meta.url);
 
 const repoBase = "/Night-Messenger-";
 const isPages = process.env.GITHUB_PAGES === "true";
+const network = process.env.NM_RELEASE_TARGET ?? "preview";
+const target = readReleaseTarget(network);
+const locked = target.network !== "preview";
+if (locked && (isPages || process.env.NM_RELEASE_PREPARATION !== "1")) {
+  throw new Error("Use pnpm build:release <preprod|mainnet> for a locked release export");
+}
+const fingerprint = locked ? buildFingerprint(network) : previewBuildFingerprint();
+const lockedSurface = fileURLToPath(new URL("./src/components/LockedRelease.tsx", import.meta.url));
 
 const midnightPackages = [
   "@midnight-messenger/shared",
@@ -32,8 +42,19 @@ const nextConfig: NextConfig = {
   transpilePackages: midnightPackages,
   env: {
     NEXT_PUBLIC_BASE_PATH: isPages ? repoBase : "",
+    NEXT_PUBLIC_NM_BUILD_FINGERPRINT: JSON.stringify(fingerprint),
+    NEXT_PUBLIC_NM_RELEASE_TARGET: network,
+    ...(locked ? { NEXT_PUBLIC_SITE_URL: "https://build-only.invalid" } : {}),
   },
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
+    if (locked) {
+      // Exclude the Preview implementations from the module graph of the
+      // prepared export, including their simulator and tunnel request paths.
+      config.plugins.push(new webpack.NormalModuleReplacementPlugin(
+        /^(?:@\/components\/(?:PrivateMessenger|ReceiptVerifier|ConnectWalletButton)|\.\/ConnectWalletButton|@\/hooks\/useWallet)$/,
+        lockedSurface,
+      ));
+    }
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,

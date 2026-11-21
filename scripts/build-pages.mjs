@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { previewBuildFingerprint } from "./release-identity.mjs";
+
+if (process.env.NM_RELEASE_TARGET && process.env.NM_RELEASE_TARGET !== "preview") {
+  throw new Error("GitHub Pages is reserved for the Preview beta");
+}
 
 // Publish the Preview deployment record with the static site so /verify can
 // show the live test contract (no secrets).
@@ -42,3 +47,4 @@ const result = spawnSync(
 );
 if (result.status !== 0) process.exit(result.status || 1);
 writeFileSync("apps/web/out/.nojekyll", "");
+writeFileSync("apps/web/out/release-fingerprint.json", JSON.stringify(previewBuildFingerprint(), null, 2) + "\n");
