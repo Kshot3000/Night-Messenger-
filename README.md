@@ -1,18 +1,21 @@
 # Night Messenger
 
-**Verified, but anonymous. Read receipts (in testing, unaudited): outsiders can't tell who acknowledged a message, but in a 1:1 chat the sender knows it was the other person.**
+Night Messenger is an open-source **Midnight Preview beta** by
+**Kshot Applications**. It combines encrypted browser messages with
+Compact membership proofs and publicly checkable message commitments
+and delivery receipts. A recipient can check the sender's key against
+a verified invite. A receipt records a contract acknowledgement;
+it does not establish that someone read the message.
 
-Night Messenger is an open-source messenger for the [Midnight](https://midnight.network) blockchain, built by **Kshot Applications**.
+> **Unaudited, disposable testnet.** Use test identities and sample
+> content. The historical deployment and Lace flow are on Preview.
+> Preprod has no recorded contract and Mainnet is disabled.
 
-- **Verified but anonymous senders.** A sender proves in zero knowledge that they are a registered member of a conversation (for example, verified staff writing to a tip line) without revealing which member.
-- **Read receipts (in testing, unaudited).** The recipient posts a delivery receipt (`ackDelivery`) against the message's on-chain commitment. Outsiders can't tell who acknowledged a message, but in a 1:1 chat the sender knows it was the other person. Anyone can look a commitment up at `/verify` and see that a member posted it and how many members acknowledged it, without seeing the message.
-- **Real end-to-end encryption in the browser.** Keys are made on your device; the relay only ever stores ciphertext.
-
-> ⚠️ **Testnet only. Not audited.** The contract and encryption code have not had a security review. Use test identities and sample content only.
->
-> **Status (Nov 2026, Wave 3 build):** encryption, relay delivery, the Compact contract and its ZK proofs all work locally. The contract is **deployed on Midnight Preview** (disposable testnet, unaudited, can reset). The hosted app can connect the Lace desktop extension to post and acknowledge on that contract. The contract is **not yet deployed to Midnight Preprod**; see [Preview status](#preview-status) and [Preprod status](#preprod-status).
-
-[Live site (static pages)](https://kshot3000.github.io/Night-Messenger-/) · [X: @kshot9000](https://x.com/kshot9000) · [Privacy model](#privacy-model) · [What changed this Wave](#what-changed-this-wave)
+[Preview beta](https://kshot3000.github.io/Night-Messenger-/) ·
+[Mainnet launch plan](docs/grants/MAINNET-LAUNCH-PLAN.md) ·
+[Threat model](docs/grants/THREAT-MODEL.md) ·
+[Grant application draft](docs/grants/MIDNIGHT-FOUNDATION-DRAFT.md) ·
+[@kshot9000](https://x.com/kshot9000)
 
 ![Private chat: a sealed message with its on-chain commitment and one delivery receipt](docs/screenshots/private-chat.png)
 
@@ -24,13 +27,13 @@ The product name lives in one constant, `PRODUCT.name` in `packages/shared/src/p
 
 **Delivery you don't have to take on trust.** In most apps, "delivered" is whatever the server says. Here each message leaves a 32-byte fingerprint (a SHA-256 commitment of its ciphertext) on-chain, and the recipient posts a receipt against it. Anyone can recompute the fingerprint from the ciphertext the relay handed over, so the relay cannot swap or edit a message without it showing, and a missing receipt is visible.
 
-**Proof you belong, without giving up who you are.** A whistleblower who really works at the company, a verified customer, a staff member on a tip line: each can prove "I'm one of the members" without "I'm Alice". The recipient, after decrypting, can still confirm which member wrote it, and either side can later hand a third party a proof of authorship for **one** message without opening any other.
+**Proof you belong, without giving up who you are.** For example, a test member of a demo tip inbox can prove "I'm one of the members" without "I'm Alice". The recipient, after decrypting, can still confirm which member wrote it, and either side can later hand a third party a proof of authorship for **one** message without opening any other.
 
 ## How it works
 
 1. **Make keys.** Your browser generates an X25519 key pair and a separate 32-byte Midnight member secret. You share an invite code (public keys only) with your contact.
 2. **Write.** Your browser seals the message for the recipient. Only the 32-byte commitment of the ciphertext goes on-chain, via `postEnvelope`, with a ZK proof that you hold a member leaf of the conversation's inbox. The proof does not say which leaf.
-3. **Deliver.** A small relay stores the sealed envelope in the recipient's mailbox. It can't read it and can't see who sent it.
+3. **Deliver.** A small relay stores the sealed envelope in the recipient's mailbox. It receives ciphertext and sees the mailbox, source IP, size and timing.
 4. **Confirm.** The recipient decrypts, checks the sender's key against the invite, checks the on-chain author tag, and posts `ackDelivery`: a one-per-member receipt (in testing, unaudited). Outsiders can't tell who acknowledged, but in a 1:1 chat the sender knows it was the other person. `/verify` shows the receipt count.
 
 ```mermaid
@@ -164,9 +167,9 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 
 **Known limits:**
 
-- **Metadata at the relay.** The relay sees the recipient's mailbox id (a hash of their public key), envelope sizes, timing and IP addresses. Use Tor or a VPN if that matters. It keeps no request log.
+- **Metadata at the relay.** The relay sees the recipient's mailbox id (a hash of their public key), envelope sizes, timing and IP addresses. The demo relay application keeps no request log. Hosting and network infrastructure may observe metadata.
 - **Chain simulator trust.** The local simulator, like Midnight's proof server, receives your private circuit inputs to run the circuit, so it must run on your own machine (it binds to 127.0.0.1). On Preview, the hosted app proves in your own browser tab by default, so those inputs stay on your device (see above).
-- **Small sets.** With few members, "one of the members" hides little. Receipts are capped at one per member, but a sender can also acknowledge their own message.
+- **Small sets.** With few members, "one of the members" hides little. Eligible members can acknowledge once per commitment. The contract burns the author's receipt nullifier when posting.
 - **No forward secrecy** if a recipient's long-term key leaks later; single device, manual backup; no audit.
 - **Invite exchange** is manual (copy/paste); verify invites out of band.
 
