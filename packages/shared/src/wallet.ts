@@ -1,8 +1,11 @@
-/** Minimal Midnight DApp Connector v4 surface used by this preview.
+/** Midnight DApp Connector API surface used by this preview.
  * https://github.com/midnightntwrk/midnight-dapp-connector-api
- * Wallets are discovered by their injected key, never a hardcoded provider name.
+ * Wallets are discovered by their injected key (`rdns` / `apiVersion`), never a hardcoded provider name.
  */
 import type { WalletSession } from "./types";
+
+/** Network id passed to `connect()`. Preview is the live tester network. */
+export const DEFAULT_MIDNIGHT_NETWORK = "preview";
 
 export interface MidnightInitialApiStub {
   name?: string;
@@ -11,13 +14,31 @@ export interface MidnightInitialApiStub {
   apiVersion?: string;
   connect?: (networkId: string) => Promise<MidnightConnectedApiStub>;
 }
+
+export interface MidnightConnectionStatus {
+  status?: string;
+  networkId?: string;
+}
+
 export interface MidnightConnectedApiStub {
   getShieldedAddresses?: () => Promise<{ shieldedAddress?: string }>;
+  getUnshieldedAddress?: () => Promise<{ unshieldedAddress?: string }>;
+  getConnectionStatus?: () => Promise<MidnightConnectionStatus>;
+  getProvingProvider?: (keyMaterialProvider: unknown) => Promise<unknown>;
+  hintUsage?: (methodNames: string[]) => Promise<void>;
+  balanceUnsealedTransaction?: (tx: string, options?: { payFees?: boolean }) => Promise<{ tx: string }>;
+  submitTransaction?: (tx: string) => Promise<void>;
 }
+
 export interface DiscoveredProvider {
   injectionKey: string;
   api: MidnightInitialApiStub;
 }
+
+/** Successful connect also yields the live API object (kept in memory only; not serializable). */
+export type MidnightConnectResult = WalletSession & {
+  api?: MidnightConnectedApiStub;
+};
 
 export function discoverMidnightProviders(): DiscoveredProvider[] {
   if (typeof window === "undefined") return [];
@@ -27,20 +48,23 @@ export function discoverMidnightProviders(): DiscoveredProvider[] {
     if (
       !value ||
       typeof value !== "object" ||
-      typeof value.connect !== "function"
+      typeof (value as MidnightInitialApiStub).connect !== "function"
     )
       return [];
     return [{ injectionKey, api: value as MidnightInitialApiStub }];
   });
 }
+
 export function listMidnightApis(): MidnightInitialApiStub[] {
   return discoverMidnightProviders().map((provider) => provider.api);
 }
+
 export function abbreviateAddress(address: string, head = 8, tail = 6): string {
   return address.length <= head + tail + 3
     ? address
     : `${address.slice(0, head)}…${address.slice(-tail)}`;
 }
+
 export function safeWalletLabel(api: MidnightInitialApiStub): string {
   return (
     String(api.name ?? "Midnight wallet")
@@ -48,11 +72,19 @@ export function safeWalletLabel(api: MidnightInitialApiStub): string {
       .slice(0, 60) || "Midnight wallet"
   );
 }
+
+function safeNetworkLabel(id: string): string {
+  return String(id)
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .slice(0, 32);
+}
+
 export async function connectMidnightWallet(options?: {
   injectionKey?: string;
   networkId?: string;
   timeoutMs?: number;
-}): Promise<WalletSession> {
+}): Promise<MidnightConnectResult> {
+  const networkId = options?.networkId ?? DEFAULT_MIDNIGHT_NETWORK;
   if (typeof window === "undefined")
     return {
       status: "unavailable",
@@ -65,7 +97,7 @@ export async function connectMidnightWallet(options?: {
       return {
         status: "unavailable",
         error:
-          "No compatible Midnight wallet found. Enable a wallet with DApp Connector v4 support, then try again. You can explore without a wallet.",
+          "No compatible Midnight wallet found. Enable the Lace desktop extension (or another wallet with DApp Connector support), then try again. Phones cannot connect Lace.",
       };
     const chosen = options?.injectionKey
       ? providers.find((p) => p.injectionKey === options.injectionKey)
@@ -76,20 +108,46 @@ export async function connectMidnightWallet(options?: {
         error:
           "That wallet is no longer available. Close this dialog and choose a wallet again.",
       };
-    const attempt = async (): Promise<WalletSession> => {
-      const connected = await chosen.api.connect!(
-        options?.networkId ?? "preprod",
-      );
+    const attempt = async (): Promise<MidnightConnectResult> => {
+      const connected = await chosen.api.connect!(networkId);
       if (!connected || typeof connected.getShieldedAddresses !== "function")
         throw new Error(
           "This wallet returned an unsupported connection. Please update your wallet extension.",
         );
+      if (typeof connected.getConnectionStatus === "function") {
+        const st = await connected.getConnectionStatus();
+        if (st?.status === "disconnected")
+          throw new Error(
+            "The wallet reported it is not connected. Approve the request and try again.",
+          );
+        if (
+          st?.status === "connected" &&
+          typeof st.networkId === "string" &&
+          st.networkId &&
+          st.networkId !== networkId
+        ) {
+          const got = safeNetworkLabel(st.networkId) || "a different network";
+          throw new Error(
+            `This wallet is on ${got}, not Midnight ${networkId}. In Lace, switch the Midnight network to ${networkId} and connect again.`,
+          );
+        }
+      }
       const addresses = await connected.getShieldedAddresses();
       const address = addresses?.shieldedAddress;
       if (typeof address !== "string" || !address.trim())
         throw new Error(
           "The wallet did not provide a shielded address. Unlock it and try again.",
         );
+      let unshieldedAddress: string | undefined;
+      if (typeof connected.getUnshieldedAddress === "function") {
+        try {
+          const u = await connected.getUnshieldedAddress();
+          if (typeof u?.unshieldedAddress === "string" && u.unshieldedAddress.trim())
+            unshieldedAddress = u.unshieldedAddress;
+        } catch {
+          /* optional on older wallets */
+        }
+      }
       return {
         status: "connected",
         injectionKey: chosen.injectionKey,
@@ -97,12 +155,15 @@ export async function connectMidnightWallet(options?: {
         rdns: chosen.api.rdns,
         apiVersion: chosen.api.apiVersion,
         shieldedAddress: address,
-        addressPreview: abbreviateAddress(address),
+        unshieldedAddress,
+        networkId,
+        addressPreview: abbreviateAddress(unshieldedAddress || address),
+        api: connected,
       };
     };
     return await Promise.race([
       attempt(),
-      new Promise<WalletSession>((_, reject) => {
+      new Promise<MidnightConnectResult>((_, reject) => {
         timer = setTimeout(
           () =>
             reject(

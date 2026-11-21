@@ -1,0 +1,23 @@
+{
+  "$comment": "Ledger 9 toolchain pin for Night Messenger. Compile scripts use `compact compile +0.36.1`. Install with `compact update 0.36.1` (not a bare `compact update`, which can install a newer unreleased line). HistoricMerkleTree depths other than 4, 8 and 15 inside a Map crash compactc 0.36.x (LFDT-Minokawa/compact #879); this contract keeps depth 15.",
+  "compact": {
+    "compiler": "0.36.1",
+    "language": "0.28.0",
+    "runtime": "0.21.0",
+    "cli": "0.5.3"
+  },
+  "node": ">=22.18",
+  "npm": {
+    "midnight-js": "5.0.1",
+    "compact-js": "3.0.2",
+    "compact-runtime": "0.21.0",
+    "wallet-sdk": "2.0.1",
+    "onchain-runtime-v4": "4.0.2",
+    "ledger-v9": "1.0.2",
+    "testkit-js": "5.0.1"
+  },
+  "images": {
+    "midnightntwrk/proof-server": "9.0.2",
+    "midnightntwrk/indexer-standalone": "4.4.101"
+  }
+}

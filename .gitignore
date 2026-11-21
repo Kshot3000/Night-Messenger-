@@ -16,3 +16,27 @@ coverage
 android/.gradle
 android/app/build
 ios/Pods
+
+# Compact build output (regenerate with `pnpm --filter @midnight-messenger/contracts compile`)
+contracts/src/managed/
+# Relay data and local secrets: never commit
+apps/relay/data/
+.env
+.env.*
+!.env.example
+secrets/
+*.seed
+
+# Self-hosted indexer data and generated secrets (scripts/local-indexer)
+scripts/local-indexer/data/
+scripts/local-indexer/.env
+
+# Wallet / private-state LevelDB written by local Preview/Preprod drills
+contracts/midnight-level-db/
+
+# ZK artifacts copied into the static site at Pages publish (prover keys are large)
+apps/web/public/zk/
+apps/web/src/generated/night_messenger/manifest-hash.ts
+
+# Ephemeral quick-tunnel URL written at Pages publish / update-pages-relay.sh
+apps/web/public/relay.json

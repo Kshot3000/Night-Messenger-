@@ -1,0 +1,10 @@
+{
+  "network": "mainnet",
+  "status": "disabled",
+  "siteOrigin": null,
+  "sitePath": "",
+  "relayOrigin": null,
+  "relayMode": "durable",
+  "indexerOrigin": null,
+  "contractAddress": null
+}
