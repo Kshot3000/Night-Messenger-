@@ -10,7 +10,7 @@ This is optional. It does not touch mainnet, does not sign up for anything, and 
 
 Evidence from a live run on this box, started 8:16 AM CT on 16 November 2026:
 
-- `midnightntwrk/indexer-standalone:4.4.101` is public (Docker Hub and GHCR, digest `sha256:119f35db548ba1c390845f215bb1e928e73038bef7c315825aee0461bd54499d`). It accepts `APP__APPLICATION__NETWORK_ID=preprod` and indexes ledger 8 and the ledger 9 fork. Wallet SDK 2.0.0 and Midnight.js 5.0.0 require this 4.4.101 line.
+- `midnightntwrk/indexer-standalone:4.4.101` is public (Docker Hub and GHCR, digest `sha256:119f35db548ba1c390845f215bb1e928e73038bef7c315825aee0461bd54499d`). It accepts `APP__APPLICATION__NETWORK_ID=preprod` and indexes ledger 8 and the ledger 9 fork. Wallet SDK 2.0.1 and Midnight.js 5.0.1 require this 4.4.101 line.
 - The hosted indexer `https://indexer.preprod.midnight.network/api/v4/graphql` still returns HTTP 410 `ENDPOINT_DECOMMISSIONED`.
 - The hosted node `https://rpc.preprod.midnight.network` and `wss://rpc.preprod.midnight.network` still work, even though the [environment docs](https://docs.midnight.network/relnotes/network) say they were retired on 9 October 2026 and should not be relied on. On this run the node reported Midnight Node `2.1.101`, ledger `9.1.0.1` (runtime `specVersion` 2001100), chain name `Midnight Preprod`, archive RPCs enabled, and tip around height 3,445,663. WebSocket subscriptions (`chain_subscribeNewHeads`) work.
 - The standalone indexer connected to that WebSocket, started at genesis (height 0), served GraphQL at `http://127.0.0.1:8088/api/v4/graphql`, and `/ready` correctly returned 503 until catch-up finishes. After about 2.7 minutes it was at height 211, a steady **1.3 blocks/s**, using about **2% CPU and 45 MiB RAM**. At that rate, 3.45 million blocks take **about 31 days**. Docs also say a public RPC is much slower than a local archive node.
@@ -25,7 +25,7 @@ Official [full node](https://docs.midnight.network/nodes/full-node) setup needs 
 
 If you later run a local archive node on a larger machine, point `APP__INFRA__NODE__URL` at `ws://127.0.0.1:9944` and expect a much faster re-index.
 
-## Pointing Midnight.js 5.0.0 and Wallet SDK 2.0.0 at it
+## Pointing Midnight.js 5.0.1 and Wallet SDK 2.0.1 at it
 
 Both already accept a self-hosted indexer and node. `networks.preprod(projectId)` is only a Blockfrost default; [midnight-js-utils](https://www.npmjs.com/package/@midnight-ntwrk/midnight-js-utils) says to build your own `MidnightNetwork` for other endpoints. Night Messenger's deploy script already does that when all four variables are set:
 

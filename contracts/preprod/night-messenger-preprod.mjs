@@ -6,8 +6,8 @@
  *   -> postEnvelope(alice, commitment of a real sealed envelope)
  *   -> ackDelivery(bob) -> read the ledger back and verify the author tag.
  *
- * Stack: midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0,
- * Compact toolchain 0.36.0 (language 0.28.0, compact-runtime 0.21.0).
+ * Stack: midnight-js 5.0.1, wallet-sdk 2.0.1, proof server 9.0.2,
+ * Compact toolchain 0.36.1 (language 0.28.0, compact-runtime 0.21.0).
  *
  * Needs (env):
  *   MIDNIGHT_NETWORK=preview|preprod (default preprod),
@@ -21,7 +21,7 @@
  *     MIDNIGHT_NODE_WS yourself.
  *   PRIVATE_STATE_PASSWORD, NM_SECRETS (dir for demo member secrets, 0700),
  *   NM_OUT (compiled managed/night_messenger with keys/).
- *   A local proof server 9.0.0 (default http://127.0.0.1:6300).
+ *   A local proof server 9.0.2 (default http://127.0.0.1:6300).
  *
  * The 9 November 2026 Preprod ledger 9 upgrade cleared DUST registrations
  * that were not backed by cNIGHT, so this script re-registers any unregistered
@@ -53,8 +53,8 @@ import { unshieldedToken } from "@midnightntwrk/ledger-v9";
 import { WebSocket } from "ws";
 import * as Rx from "rxjs";
 
-const COMPILER = "compactc 0.36.0";
-const RUNTIME = "compact-runtime 0.21.0, midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0";
+const COMPILER = "compactc 0.36.1";
+const RUNTIME = "compact-runtime 0.21.0, midnight-js 5.0.1, wallet-sdk 2.0.1, proof server 9.0.2";
 const NETWORK = (process.env.MIDNIGHT_NETWORK ?? "preprod").trim().toLowerCase();
 const FAUCETS = {
   preprod: "https://midnight-tmnight-preprod.nethermind.dev/",
@@ -247,7 +247,7 @@ async function ensureDustRegistered(wallet, keystore, { dustWaitTimeoutMs = 900_
 async function main() {
   if (!fs.existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) throw new Error("no prover keys: run the full ZK compile (`pnpm compile:contracts`)");
   if (!(await fetch(`${PROOF}/health`).then((r) => r.ok).catch(() => false))) {
-    throw new Error(`proof server ${PROOF} is not healthy (docker run -p 6300:6300 midnightntwrk/proof-server:9.0.0 -- midnight-proof-server -v)`);
+    throw new Error(`proof server ${PROOF} is not healthy (docker run -p 6300:6300 midnightntwrk/proof-server:9.0.2 -- midnight-proof-server -v)`);
   }
   const { Contract, ledger, pureCircuits: P } = await import(pathToFileURL(path.join(OUT, "contract/index.js")).href);
   const E = await import(pathToFileURL(E2EE).href);

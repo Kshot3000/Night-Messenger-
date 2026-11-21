@@ -8,7 +8,7 @@
  * party and the public can see. Run: pnpm demo:e2e (from the repo root).
  */
 import * as RT from "@midnight-ntwrk/compact-runtime";
-import { Contract, ledger } from "../src/managed/night_messenger/contract/index.js";
+import { Contract, ledger } from "../../apps/web/src/generated/night_messenger/contract/index.js";
 import { deployState, runCircuit } from "../lib/runtime.mjs";
 import * as E from "../../packages/shared/src/e2ee.ts";
 import { createRelay } from "../../apps/relay/server.mjs";

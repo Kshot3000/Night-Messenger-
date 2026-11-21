@@ -1,0 +1,35 @@
+{
+  "source": "contracts/src/night_messenger.compact",
+  "sourceSha256": "1e634bfb75fb2370c90709e5e7163a2b83e20a0d9e47a37cb3a145af06d07230",
+  "compiler": "0.36.1",
+  "compilerCommit": "7fa3a117c5e7efe9d2c51da04263e5f0b3509144",
+  "runtime": "0.21.0",
+  "compilerManifestSha256": "c2e60df7b933760860945bd560a0118a5aba718cd2922561110cf4ed6cd00165",
+  "bindings": {
+    "contract/index.js": "9c9165a440f25d23e6bc66cfe890daf5e87833972fcc81ff902fb65c3d1ac58b",
+    "contract/index.d.ts": "66eaa080d8f6b996192d13700eae3cba1c106410a433a4e7f7fa27429cae3710"
+  },
+  "circuits": {
+    "zkir/ackDelivery.bzkir": "4a462e880450f8ebfcbfd103280ace67d2349ded30158fa8b929ce01807053d9",
+    "zkir/addMember.bzkir": "0dd0a755ae74bc3d614d58ef02c252ec8b135dfe03a8e4b4abf8fafc282de460",
+    "zkir/closeInbox.bzkir": "9c0159dee7b07e0296250b1386aca7b54db7c53cf0178373cbd035ed0f8f4791",
+    "zkir/createInbox.bzkir": "d97b7aaf9db53e6d8f04e01d4ddd5e6755ff7ffcf1c70034ead3ee3bc7d32b9b",
+    "zkir/postEnvelope.bzkir": "296a8ffc2edf49792eab3ce1fa38f6d50226eb1c51a270b6c2f67f7ad62f13c7",
+    "zkir/removeMember.bzkir": "db6d7bdeb9bda42413430baafbb85fed0e30c1ec7e7a5f3d2b147169c8d4527f",
+    "zkir/revealAuthor.bzkir": "655bb32f7135c5814af7f5e73daa127887a299b0f3084fbdbf046882f2404fdc",
+    "keys/ackDelivery.prover": "0bccf4917005d70bb0252c53d7a493a2eb47c2b1da65dace586c66da0ba52fad",
+    "keys/ackDelivery.verifier": "cb65232ccd88ffc5e8b3648212e9cd37c653064443d924f5005458bac41116c9",
+    "keys/addMember.prover": "b33d36af04f893861bf29a65da3c8826892b7e20d37ec7aa85e3e41eaad273ee",
+    "keys/addMember.verifier": "7c9252779e74c0d024e76fb9a3bd683b5c576c4d6e367de962b9de80cee2c007",
+    "keys/closeInbox.prover": "dd00fb938c264c294850d1ebe29ec1562a9fc0950d62e2a330bde4ca244b73ac",
+    "keys/closeInbox.verifier": "5ed09af8b62cd0643f6ba3d8b660a4451a1b03597c9354773f64b252e7095ed9",
+    "keys/createInbox.prover": "af8b868c697030eac0f2d24a9c60547db3cf3cce87ac3106062c707d5e283f6b",
+    "keys/createInbox.verifier": "e64308575e11ec1ca0ca8837a1956e98170d13bb87826b8836763949630e6205",
+    "keys/postEnvelope.prover": "381cc2ee696d4573b5b940145b9047d895ed7f9a23663aea4a73d0865c7e95bb",
+    "keys/postEnvelope.verifier": "1f8fbc13b3c3480f9e28b5eecf549d1b0f527af72299c34d27cc84c27cbaf9e4",
+    "keys/removeMember.prover": "12e83eb883edff7bea860497d82d6ad275457e690a4794cd196a02d50b56744a",
+    "keys/removeMember.verifier": "7ca094c7014f594b4386ec14edc3ea1d1f42f4631794cd15ac0a475484aa0bab",
+    "keys/revealAuthor.prover": "63cdd21654b22c0a6f6138776890fab83c53d60200ac566a652373ca8c5fcdbb",
+    "keys/revealAuthor.verifier": "3684688b401c66182f6197cf0c59f6a8277d098a373613913042d7446923a4e9"
+  }
+}

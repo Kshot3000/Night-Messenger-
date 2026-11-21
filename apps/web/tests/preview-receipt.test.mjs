@@ -1,47 +1,71 @@
-import test from "node:test";
+// SPDX-License-Identifier: Apache-2.0
+import { before, test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  decodePreviewReceipt,
-  PREVIEW_CONTRACT_FALLBACK,
-} from "../src/lib/preview-receipt.ts";
+import * as RT from "@midnight-ntwrk/compact-runtime";
+import { Contract, pureCircuits as P } from "../src/generated/night_messenger/contract/index.js";
+import { runCircuit } from "../../../contracts/lib/runtime.mjs";
+import { decodePreviewReceipt, PREVIEW_CONTRACT_FALLBACK } from "../src/lib/preview-receipt.ts";
 
-const TEST_COMMITMENT =
-  "f875530954e9a0d98a66164e93e16f8fef5d758468c703d3b1a221e7e7a2e7cf";
+const coin = "0".repeat(64);
+const b32 = (value) => new Uint8Array(32).fill(value);
+const hex = (value) => Buffer.from(value).toString("hex");
+const author = { sk: b32(1), blind: b32(2) };
+const recipient = { sk: b32(3) };
+const seed = b32(4);
+const commitment = b32(5);
+const member = P.memberCommitment(author.sk);
+const inbox = P.inboxIdFor(member, seed);
+const contractAddress = PREVIEW_CONTRACT_FALLBACK;
+let stateHex;
 
-test("live Preview ledger decode reports the known drill receipt", async (t) => {
-  let result;
-  try {
-    result = await decodePreviewReceipt(TEST_COMMITMENT, {
-      contractAddress: PREVIEW_CONTRACT_FALLBACK,
-    });
-  } catch (e) {
-    t.skip(`Preview indexer unreachable: ${e.message}`);
-    return;
+before(async () => {
+  const contract = new Contract({
+    localSecretKey: ({ privateState }) => [privateState, privateState.sk],
+    authorBlind: ({ privateState }) => [privateState, privateState.blind],
+    memberPath: ({ privateState, ledger }, leaf) => [
+      privateState, ledger.members.lookup(inbox).findPathForLeaf(leaf),
+    ],
+  });
+  const { currentContractState } = await contract.initialState(RT.createConstructorContext(author, coin));
+  for (const [who, name, args] of [
+    [author, "createInbox", [seed]],
+    [author, "addMember", [inbox, member]],
+    [author, "addMember", [inbox, P.memberCommitment(recipient.sk)]],
+    [author, "postEnvelope", [inbox, commitment]],
+    [recipient, "ackDelivery", [commitment]],
+  ]) {
+    const result = await runCircuit(contract, { address: contractAddress, coin }, currentContractState.data, who, name, args);
+    currentContractState.data = result.state;
   }
-  assert.equal(result.source, "preview-ledger");
-  assert.equal(result.contractAddress, PREVIEW_CONTRACT_FALLBACK);
-  if (!result.posted) {
-    t.skip("The Preview drill post is gone (the chain may have reset).");
-    return;
-  }
-  assert.equal(result.receipts, "1");
-  assert.equal(
-    result.inboxId,
-    "0db0cb2e8ce6bde7a23de1839c7d1f4c768d03846d75cde7f79650383c1914a3",
-  );
-  assert.equal(
-    result.authorTag,
-    "587a7bf54a9ed9d3141a2dc040cfa975ca1860d7164fb1023fcce2db9aa6a4d0",
-  );
-  assert.equal(result.seq, "0");
+  stateHex = hex(currentContractState.serialize());
+});
+
+function stubIndexer(t, contract = { state: stateHex }) {
+  const indexer = "https://indexer-fixture.test";
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, indexer);
+    assert.equal(options.method, "POST");
+    assert.equal(JSON.parse(options.body).variables.a, contractAddress);
+    return Response.json({ data: { block: { height: 10 }, contract } });
+  });
+  return { indexer, contractAddress };
+}
+
+test("receipt decoder reads a locally simulated post and receipt through the indexer response shape", async (t) => {
+  const result = await decodePreviewReceipt(hex(commitment), stubIndexer(t));
+  assert.deepEqual(result, {
+    source: "preview-ledger", commitment: hex(commitment), contractAddress,
+    posted: true, receipts: "1", inboxId: hex(inbox), seq: "0", height: 10,
+    authorTag: hex(P.authorTag(commitment, member, author.blind)),
+  });
 });
 
 test("an unknown commitment is not posted", async (t) => {
-  try {
-    const result = await decodePreviewReceipt("00".repeat(32));
-    assert.equal(result.posted, false);
-    assert.equal(result.commitment, "00".repeat(32));
-  } catch (e) {
-    t.skip(`Preview indexer unreachable: ${e.message}`);
-  }
+  const result = await decodePreviewReceipt(hex(b32(0)), stubIndexer(t));
+  assert.equal(result.posted, false);
+  assert.equal(result.commitment, hex(b32(0)));
+});
+
+test("an indexer without the configured contract yields no receipt", async (t) => {
+  await assert.rejects(decodePreviewReceipt(hex(commitment), stubIndexer(t, null)), /contract was not found/);
 });

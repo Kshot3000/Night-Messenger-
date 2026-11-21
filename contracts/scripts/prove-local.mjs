@@ -3,7 +3,7 @@
 /**
  * Real ZK proofs for every Night Messenger circuit against a local proof
  * server (default http://127.0.0.1:6300, Docker image
- * midnightntwrk/proof-server 9.0.0). Runs createInbox -> addMember x2 ->
+ * midnightntwrk/proof-server 9.0.2). Runs createInbox -> addMember x2 ->
  * postEnvelope -> ackDelivery -> revealAuthor -> removeMember -> closeInbox in
  * the compact-runtime simulator, then asks the proof server to /check and
  * /prove each call with the full-ZK keys from `pnpm compile`.
@@ -21,7 +21,7 @@ import { deployState, runCircuit } from "../lib/runtime.mjs";
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "managed", "night_messenger");
 const PROOF = process.env.MIDNIGHT_PROOF_SERVER ?? "http://127.0.0.1:6300";
 if (!existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) throw new Error("no prover keys: run `pnpm compile` (full ZK build) first");
-if (!(await fetch(`${PROOF}/health`).then((r) => r.ok).catch(() => false))) throw new Error(`proof server ${PROOF} is not healthy (docker run -p 6300:6300 midnightntwrk/proof-server:9.0.0 -- midnight-proof-server -v)`);
+if (!(await fetch(`${PROOF}/health`).then((r) => r.ok).catch(() => false))) throw new Error(`proof server ${PROOF} is not healthy (docker run -p 6300:6300 midnightntwrk/proof-server:9.0.2 -- midnight-proof-server -v)`);
 
 const { Contract, pureCircuits: P } = await import(path.join(OUT, "contract", "index.js"));
 const b32 = () => new Uint8Array(randomBytes(32));
@@ -65,4 +65,4 @@ await proveCall(bob, "ackDelivery", [c]);
 await proveCall({ ...alice, blind }, "revealAuthor", [c]);
 await proveCall(owner, "removeMember", [inbox, P.memberCommitment(bob.sk)]);
 await proveCall(owner, "closeInbox", [inbox]);
-console.log(JSON.stringify({ claim: "local ZK proofs against the proof server; not submitted, not a deploy", compiler: "compactc 0.36.0 (language 0.28.0)", runtime: "@midnight-ntwrk/compact-runtime 0.21.0", proofServerImage: process.env.NM_PROOF_SERVER_IMAGE ?? "midnightntwrk/proof-server:9.0.0", proofServer: PROOF, at: new Date().toISOString(), proofs: report }, null, 2));
+console.log(JSON.stringify({ claim: "local ZK proofs against the proof server; not submitted, not a deploy", compiler: "compactc 0.36.1 (language 0.28.0)", runtime: "@midnight-ntwrk/compact-runtime 0.21.0", proofServerImage: process.env.NM_PROOF_SERVER_IMAGE ?? "midnightntwrk/proof-server:9.0.2", proofServer: PROOF, at: new Date().toISOString(), proofs: report }, null, 2));

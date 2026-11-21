@@ -3,8 +3,8 @@ packages:
   - 'packages/*'
   - 'contracts'
 overrides:
-  '@midnightntwrk/ledger-v9': 1.0.0
-  '@midnightntwrk/onchain-runtime-v4': 4.0.0
+  '@midnightntwrk/ledger-v9': 1.0.2
+  '@midnightntwrk/onchain-runtime-v4': 4.0.2
   regenerate-unicode-properties: 10.2.2
 allowBuilds:
   sharp: true

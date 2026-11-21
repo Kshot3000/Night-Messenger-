@@ -36,6 +36,7 @@ import { deployState, runCircuit } from "../lib/runtime.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = process.env.NM_OUT ?? path.join(HERE, "..", "src", "managed", "night_messenger");
+const TESTED_BINDINGS = new URL("../../apps/web/src/generated/night_messenger/contract/index.js", import.meta.url);
 const HEX32 = /^[0-9a-f]{64}$/;
 const u8 = (h) => new Uint8Array(Buffer.from(h, "hex"));
 const hex = (b) => Buffer.from(b).toString("hex");
@@ -46,7 +47,11 @@ export function usage(l) {
 }
 
 export async function createChainSim({ proofServer = "", origins = "http://localhost:3000,http://127.0.0.1:3000" } = {}) {
-  const { Contract, ledger, pureCircuits: P } = await import(pathToFileURL(path.join(OUT, "contract", "index.js")).href);
+  if (proofServer && !existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) {
+    throw new Error("Proof server set but proving artifacts missing. Run pnpm compile:contracts first.");
+  }
+  const binding = proofServer ? pathToFileURL(path.join(OUT, "contract", "index.js")) : TESTED_BINDINGS;
+  const { Contract, ledger, pureCircuits: P } = await import(binding.href);
   const witnesses = {
     localSecretKey: ({ privateState }) => [privateState, privateState.sk],
     memberPath: ({ privateState, ledger: l }, leaf) => {
@@ -65,7 +70,7 @@ export async function createChainSim({ proofServer = "", origins = "http://local
   const log = []; // public tx log: circuit, public args, time, proof info
 
   let prover = null;
-  if (proofServer && existsSync(path.join(OUT, "keys", "postEnvelope.prover"))) {
+  if (proofServer) {
     const { NodeZkConfigProvider } = await import("@midnight-ntwrk/midnight-js-node-zk-config-provider");
     const { httpClientProvingProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
     prover = httpClientProvingProvider(proofServer, new NodeZkConfigProvider(OUT), { timeout: 600_000 });

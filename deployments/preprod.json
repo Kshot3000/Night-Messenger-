@@ -1,11 +1,12 @@
 {
   "network": "midnight-preprod",
   "status": "not-deployed",
-  "reason": "Midnight retired its hosted Preprod indexer and RPC on 9 October 2026 (indexer.preprod.midnight.network returns HTTP 410). Public Preprod access now requires a Blockfrost Midnight Preprod project id, and none is available in this environment. A funded Preprod wallet is also required: tNIGHT from the faucet at https://midnight-tmnight-preprod.nethermind.dev/ (browser captcha), then DUST re-registration after the 9 November 2026 ledger 9 upgrade. The contract compiles with Compact toolchain 0.36.0 and every circuit has local ZK proofs against proof server 9.0.0 (docs/local-proofs.json).",
+  "reason": "The Midnight-hosted Preprod indexer and RPC were retired on 9 October 2026. A Midnight Preprod Blockfrost project ID and a funded, DUST-registered Preprod wallet are required. The 0.36.0 local proof run in docs/local-proofs.json is historical.",
   "contract": "contracts/src/night_messenger.compact",
-  "compiler": "compactc 0.36.0",
+  "compiler": "compactc 0.36.1",
   "language": "0.28.0",
-  "runtime": "compact-runtime 0.21.0, midnight-js 5.0.0, wallet-sdk 2.0.0, proof server 9.0.0",
+  "runtime": "compact-runtime 0.21.0, midnight-js 5.0.1, wallet-sdk 2.0.1, proof server 9.0.2",
   "contractAddress": null,
-  "deployScript": "contracts/preprod/night-messenger-preprod.mjs"
+  "deployScript": "contracts/preprod/night-messenger-preprod.mjs",
+  "versionNote": "Planned Ledger 9 drill configuration. No deployment or proof run on these pins is recorded here."
 }
