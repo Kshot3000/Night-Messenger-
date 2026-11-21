@@ -60,6 +60,7 @@ export function PrivateMessenger() {
   const [busy, setBusy] = useState(false);
   const [acking, setAcking] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const initialRelayQuery = useRef(searchParams.get("relay"));
   const { session, api } = useWallet();
   const previewMode = session.status === "connected" && !!api;
   const keyRef = useRef<CryptoKey | null>(null);
@@ -74,7 +75,7 @@ export function PrivateMessenger() {
         // `?relay=` applies to this page load only; an override saved by an
         // older build is removed so the published relay.json wins.
         clearStoredRelayOverride(globalThis.localStorage);
-        const fromQuery = parseRelayParam(searchParams.get("relay"));
+        const fromQuery = parseRelayParam(initialRelayQuery.current);
         const published = fromQuery ? null : await loadPublishedRelay();
         setRelay(resolveRelayUrl({ query: fromQuery, published, fallback: DEFAULT_RELAY }));
         setChain(localStorage.getItem(CHAIN_KEY) || DEFAULT_CHAIN);
@@ -363,7 +364,7 @@ export function PrivateMessenger() {
       {previewMode && (
         <p className="pm-notice" role="status">
           Lace will approve each on-chain call. Incoming receipts are not acknowledged automatically — use Acknowledge delivery.
-          Proving uses Lace Settings → Midnight (try Remote first if listed; otherwise run proof server 9.0.0 locally). A remote prover can read your member secret.
+          Proving uses Lace Settings → Midnight (try Remote first if listed; otherwise run proof server 9.0.2 locally). A remote prover can read your member secret.
         </p>
       )}
       {!previewMode && chainRisk(chain) !== "local" && (

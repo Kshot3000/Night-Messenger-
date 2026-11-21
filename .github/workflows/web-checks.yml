@@ -41,6 +41,9 @@ jobs:
       - name: Run regression tests
         run: pnpm test
 
+      - name: Verify checked-in Compact bindings and run simulator tests
+        run: pnpm test:contracts
+
       - name: Typecheck shared and web packages
         run: pnpm typecheck
 

@@ -59,8 +59,8 @@ sequenceDiagram
 | E2EE in the browser (`/private`) | ✅ X25519 + HKDF-SHA-256 + AES-256-GCM via the browser's built-in **WebCrypto** (no third-party crypto library), Noise-X-style sealed envelopes |
 | Keys at rest | ✅ sealed with a non-extractable AES-GCM device key kept in IndexedDB; passphrase backup/restore (PBKDF2-SHA-256, 600k iterations) |
 | Delivery between two browsers | ✅ tiny zero-dependency Node relay (`apps/relay`) |
-| Compact contract | ✅ `contracts/src/night_messenger.compact`, Compact toolchain **0.36.0**, 7 circuits |
-| ZK proofs | ✅ every circuit proves against proof server 9.0.0 (`docs/local-proofs.json`; 5,420-byte proofs, `postEnvelope` ≈ 3–4 s) |
+| Compact contract | ✅ `contracts/src/night_messenger.compact`, Compact toolchain **0.36.1**, 7 circuits; checked-in bindings reproduced |
+| ZK proofs | Historical local run on proof server 9.0.0 (`docs/local-proofs.json`); the 9.0.2 local proof rerun is pending |
 | Anonymous sender, recipient verification, per-message authorship disclosure | ✅ |
 | Public receipt check (`/verify`) | ✅ decodes live Midnight Preview ledger state (testnet; can reset) |
 | Usage counts (registrations, envelopes, receipts) | ✅ ledger counters, shown on `/verify` and via `pnpm stats` |
@@ -81,13 +81,13 @@ cd Night-Messenger-
 npm install -g pnpm@11.25.0
 pnpm install --frozen-lockfile
 
-# 1. Compile the contract (Compact toolchain, compiler 0.36.0)
-#    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
-#    compact update 0.36.0
-pnpm compile:contracts            # full build with proving keys (~25 s)
+# 1. Optional full Compact build (for proving; simulation uses the committed bindings)
+#    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/download/compact-v0.5.3/compact-installer.sh | sh
+#    compact update 0.36.1
+pnpm compile:contracts            # full build with proving keys
 
 # 2. Optional: a local proof server for real ZK proofs (Docker)
-docker run -p 6300:6300 midnightntwrk/proof-server:9.0.0
+docker run -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:9.0.2
 
 # 3. In three terminals:
 pnpm relay                                              # ciphertext relay on :8787
@@ -107,7 +107,7 @@ pnpm demo:e2e
 
 ```bash
 pnpm test             # E2EE, relay, private-chat state, and existing web tests (no compiler needed)
-pnpm test:contracts   # compiles with --skip-zk, then simulator tests for every circuit + chain simulator
+pnpm test:contracts   # checks the committed bindings and tests every circuit + chain simulator
 pnpm typecheck        # web and shared packages
 pnpm lint             # web source
 pnpm build:web        # static export
@@ -115,7 +115,7 @@ pnpm --filter @midnight-messenger/contracts prove:local   # real proofs; needs s
 pnpm --filter @midnight-messenger/contracts stats -- --sim http://localhost:8788
 ```
 
-The `Web checks` GitHub Actions workflow (`.github/workflows/web-checks.yml`) runs `pnpm test`, `pnpm typecheck`, `pnpm lint` and `pnpm build:web` on every main-branch push and pull request. Contract tests (`pnpm test:contracts`) are pinned to Compact toolchain 0.36.0 in `toolchain.json`.
+The `Web checks` GitHub Actions workflow (`.github/workflows/web-checks.yml`) runs `pnpm test`, `pnpm test:contracts`, `pnpm typecheck`, `pnpm lint` and `pnpm build:web` on every main-branch push and pull request. Contract tests load the same checked-in Compact bindings as the web app. See [binding provenance and regeneration](apps/web/src/generated/night_messenger/README.md).
 
 Relay and chain URLs default to `http://localhost:8787` and `http://localhost:8788`; change them under **Relay & chain** in the app, or at build time with `NEXT_PUBLIC_NM_RELAY_URL` / `NEXT_PUBLIC_NM_CHAIN_URL`. Remote endpoints must be `https://`.
 
@@ -131,7 +131,7 @@ Relay and chain URLs default to `http://localhost:8787` and `http://localhost:87
 | Preprod drill | `contracts/preprod` | Deploy + post + ack script (not run yet) | Apache-2.0 |
 | Mobile starter | `apps/mobile` | Earlier Expo starter, not part of this release. The web app will later be wrapped with Capacitor | MIT |
 
-**Stack:** Compact compiler 0.36.0 · `@midnight-ntwrk/compact-runtime` 0.21.0 · midnight-js 5.0.0 · wallet-sdk 2.0.0 · proof server 9.0.0 · Next.js 15 · React 19 · TypeScript · Node 24.
+**Stack:** Compact compiler 0.36.1 · `@midnight-ntwrk/compact-runtime` 0.21.0 · midnight-js 5.0.1 · wallet-sdk 2.0.1 · proof server 9.0.2 · Next.js 15 · React 19 · TypeScript · Node 24.
 
 ## Contract functions
 
@@ -172,11 +172,11 @@ Usage counters on the ledger: `inboxCount`, `membersAdded` (registrations), `pos
 
 ## Preprod status
 
-Not deployed yet. **Contract address: none.** The contract and deploy script are updated for Midnight's ledger 9 Preprod upgrade (9 November 2026): Compact toolchain 0.36.0, midnight-js 5.0.0, wallet-sdk 2.0.0 and proof server 9.0.0. The deploy-and-drill script (`contracts/preprod/night-messenger-preprod.mjs`) re-registers tNIGHT for DUST (the upgrade cleared registrations that were not backed by cNIGHT) and needs:
+Not deployed yet. **Contract address: none.** The pending Ledger 9 drill is pinned to Compact toolchain 0.36.1, midnight-js 5.0.1, wallet-sdk 2.0.1 and proof server 9.0.2. The deploy-and-drill script (`contracts/preprod/night-messenger-preprod.mjs`) re-registers tNIGHT for DUST (the upgrade cleared registrations that were not backed by cNIGHT) and needs:
 
 1. A Preprod wallet seed or mnemonic in `MIDNIGHT_WALLET_SEED` / `MIDNIGHT_WALLET_MNEMONIC`, funded with tNIGHT from the free Preprod faucet at https://midnight-tmnight-preprod.nethermind.dev/ (the page uses a captcha).
 2. A Blockfrost Midnight Preprod project id (`BLOCKFROST_MIDNIGHT_PREPROD_ID` or `BLOCKFROST_PROJECT_ID`), **or** a self-hosted indexer. Midnight retired its hosted Preprod indexer on 9 October 2026 (it still returns HTTP 410). The hosted RPC at `rpc.preprod.midnight.network` still answered as of 16 November 2026, but the docs say not to rely on it. You can run Midnight's public `indexer-standalone` 4.4.101 against that RPC (or against your own node) and set `MIDNIGHT_INDEXER_URL`, `MIDNIGHT_INDEXER_WS_URL`, `MIDNIGHT_NODE` and `MIDNIGHT_NODE_WS`. See [scripts/local-indexer/README.md](scripts/local-indexer/README.md): this works, but a catch-up from the public RPC is about a month at ~1.3 blocks/s, so Blockfrost is still the practical path for a timely deploy.
-3. A running proof server 9.0.0 and the full ZK build (`pnpm compile:contracts`).
+3. A running proof server 9.0.2 and the full ZK build (`pnpm compile:contracts`).
 
 When it runs, `deployments/preprod.json` records the address and `https://preprod.midnightexplorer.com/contracts/0x…` links.
 
@@ -213,7 +213,7 @@ The public SRS parameters the prover needs (`bls_midnight_2p13`–`15`, no secre
 Testing overrides on `/private`: `?prover=local` uses a proof server you run at `http://localhost:6300`; `?prover=wallet` uses Lace's `getProvingProvider()` (for future Lace versions that read ZKIR v3); `?prover=device` returns to the default. The choice is remembered in this browser. To run a local proof server:
 
 ```bash
-docker run --rm -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:9.0.0
+docker run --rm -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:9.0.2
 ```
 
 Bind only to 127.0.0.1; the proof server has no authentication or TLS.
@@ -252,7 +252,7 @@ Several teams are building private messaging on Midnight, and we think that's go
 **Now:**
 
 - Compact contract with anonymous membership posting, author tags, one-per-member delivery receipts (in testing, unaudited; in a 1:1 chat the sender knows who acknowledged), opt-in author reveal, member removal and usage counters; simulator tests for every circuit.
-- Real ZK proofs for every circuit against proof server 9.0.0.
+- Historical local ZK proofs for every circuit against proof server 9.0.0. See `docs/local-proofs.json` for the recorded versions.
 - In-browser E2EE with keys sealed at rest (folding in the useful parts of the earlier [Nocturne](https://github.com/Kshot3000/nocturne) preview: device-key sealing and passphrase wrapping).
 - Ciphertext-only relay, local chain simulator, `/private` and `/verify` pages, terminal demo.
 - Apache-2.0 for the new Midnight code.

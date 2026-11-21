@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import * as RT from "@midnight-ntwrk/compact-runtime";
 import { deployState, runCircuit } from "../lib/runtime.mjs";
-import { Contract, ledger, pureCircuits as P } from "../src/managed/night_messenger/contract/index.js";
+import { Contract, ledger, pureCircuits as P } from "../../apps/web/src/generated/night_messenger/contract/index.js";
 import * as E from "../../packages/shared/src/e2ee.ts";
 
 const COIN = "0".repeat(64);

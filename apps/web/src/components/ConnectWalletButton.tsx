@@ -141,7 +141,7 @@ export function ConnectWalletButton({
               Proving follows whatever you set in Lace under Settings → Midnight.
               If Remote is listed, it is the least install (no Docker) but the
               remote operator can read private proof inputs, including your
-              member secret. The private option is a local proof server 9.0.0 on
+              member secret. The private option is a local proof server 9.0.2 on
               127.0.0.1:6300 with Local selected. See the README for sources.
             </p>
           </div>

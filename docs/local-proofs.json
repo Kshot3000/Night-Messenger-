@@ -1,5 +1,6 @@
 {
   "claim": "local ZK proofs against the proof server; not submitted, not a deploy",
+  "versionNote": "Historical proof run. Compiler, runtime, image and measurements record this run and do not follow current toolchain pins.",
   "compiler": "compactc 0.36.0 (language 0.28.0)",
   "runtime": "@midnight-ntwrk/compact-runtime 0.21.0",
   "proofServerImage": "midnightntwrk/proof-server:9.0.0",
