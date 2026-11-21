@@ -8,6 +8,9 @@
   "main": "./server.mjs",
   "scripts": {
     "start": "node server.mjs",
+    "start:durable": "node durable-server.mjs",
+    "backup:durable": "node backup.mjs",
+    "load:durable": "node load.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

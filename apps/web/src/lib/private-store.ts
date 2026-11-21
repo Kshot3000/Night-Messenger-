@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /** Pure state helpers for the private (E2EE) messenger. Storage lives in private-vault.ts. */
 import type { PublicIdentity } from "@midnight-messenger/shared";
+import type { RelayCursor } from "./relay-client";
 
 export const DEFAULT_RELAY =
   process.env.NEXT_PUBLIC_NM_RELAY_URL || "http://localhost:8787";
@@ -30,7 +31,8 @@ export type PrivateState = {
   v: 1;
   contacts: Contact[];
   threads: Record<string, ChatMessage[]>; // keyed by contact mailbox
-  cursor: number; // relay seq already fetched for our mailbox
+  cursor: number; // legacy cursor, retained for reading existing browser state
+  relayCursor?: RelayCursor;
 };
 export const emptyState = (): PrivateState => ({ v: 1, contacts: [], threads: {}, cursor: 0 });
 
