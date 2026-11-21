@@ -26,6 +26,7 @@ import { Icon } from "./Icon";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { DEFAULT_RELAY, addContact, addMessage, clearStoredRelayOverride, contactAddOutcome, emptyState, isRelayUrl, parseRelayParam, resolveRelayUrl, updateMessage, type ChatMessage, type PrivateState } from "@/lib/private-store";
 import { loadPublishedRelay } from "@/lib/relay-config";
+import { canAuthorizeRelay, pollUrl, relayAuthorization, submitEnvelope } from "@/lib/relay-client";
 import { describeError } from "@/lib/error-detail";
 import { deviceKey, forgetEverything, loadIdentity, loadState, saveIdentity, saveState } from "@/lib/private-vault";
 import { CHAIN_KEY, DEFAULT_CHAIN, chainRisk, chainAck, chainHealth, chainInbox, chainReceipt, chainSend } from "@/lib/chain-client";
@@ -54,6 +55,10 @@ export function PrivateMessenger() {
   const [relay, setRelay] = useState(DEFAULT_RELAY);
   const [chain, setChain] = useState(DEFAULT_CHAIN);
   const [relayOk, setRelayOk] = useState<boolean | null>(null);
+  const [restrictedRelay, setRestrictedRelay] = useState("");
+  const [access, setAccess] = useState<{ relay: string; read: string; write: Record<string, string> }>({ relay: "", read: "", write: {} });
+  const requiresAccess = restrictedRelay === relay;
+  const readToken = access.relay === relay ? access.read : "";
   const [chainInfo, setChainInfo] = useState<{ ok: boolean; proving: boolean } | null>(null);
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState("");
@@ -65,7 +70,10 @@ export function PrivateMessenger() {
   const previewMode = session.status === "connected" && !!api;
   const keyRef = useRef<CryptoKey | null>(null);
   const stateRef = useRef(state);
+  const relayRef = useRef(relay);
+  const polling = useRef(false);
   stateRef.current = state;
+  relayRef.current = relay;
 
   // ---------------------------------------------------------- boot
   useEffect(() => {
@@ -116,12 +124,14 @@ export function PrivateMessenger() {
     if (boot !== "ready") return;
     let stop = false;
     const ping = async () => {
-      const r = await fetch(`${relay.replace(/\/$/, "")}/health`).then((x) => x.ok).catch(() => false);
+      const r = await fetch(`${relay.replace(/\/$/, "")}/health`, { credentials: "omit", redirect: "error", signal: AbortSignal.timeout(9000) }).catch(() => null);
+      const health = r?.ok ? await r.json().catch(() => null) : null;
       const c = previewMode
         ? { ok: true, proving: true }
         : await chainHealth(chain).catch(() => null);
       if (!stop) {
-        setRelayOk(r);
+        setRelayOk(r?.ok ?? false);
+        setRestrictedRelay(health?.auth === "mailbox-capability" ? relay : "");
         setChainInfo(c ? { ok: true, proving: !!c.proving } : { ok: false, proving: false });
       }
     };
@@ -135,46 +145,63 @@ export function PrivateMessenger() {
 
   // ---------------------------------------------------------- receive
   const poll = useCallback(async () => {
-    if (!me || !myPublic || !relayOk) return;
-    let s = stateRef.current;
-    const r = await fetch(`${relay.replace(/\/$/, "")}/v1/mailboxes/${myPublic.mailbox}/messages?after=${s.cursor}`).catch(() => null);
-    if (!r?.ok) return;
-    const { messages, next } = (await r.json()) as { messages: { seq: number; envelope: string }[]; next: number };
-    if (!messages.length) return;
-    for (const m of messages) {
-      try {
-        const o = await openEnvelope(me, fromB64u(m.envelope));
-        let contact = s.contacts.find((c) => c.encPublic === o.senderKey);
-        const verified = !!contact && contact.member === o.payload.member;
-        if (!contact) {
-          const pub = fromB64u(o.senderKey);
-          const stranger: PublicIdentity = { v: 1, name: `${o.payload.from.slice(0, 28)} (not in contacts)`, encPublic: o.senderKey, member: o.payload.member, mailbox: await mailboxFor(pub) };
-          s = addContact(s, stranger, undefined, { unverified: true });
-          contact = s.contacts.find((c) => c.mailbox === stranger.mailbox)!;
+    if (!me || !myPublic || !relayOk || polling.current) return;
+    const headers = requiresAccess ? relayAuthorization(relay, readToken) : {};
+    if (requiresAccess && !headers.authorization) return;
+    polling.current = true;
+    const before = stateRef.current;
+    let s = before;
+    try {
+      const r = await fetch(pollUrl(relay, myPublic.mailbox, s.relayCursor), {
+        headers, credentials: "omit", redirect: "error", signal: AbortSignal.timeout(9000),
+      }).catch(() => null);
+      if (!r?.ok) return;
+      const page = (await r.json().catch(() => null)) as {
+        messages?: { seq: number; envelope: string }[]; next?: number; instance?: string;
+      } | null;
+      if (!Array.isArray(page?.messages) || typeof page.next !== "number" || !Number.isSafeInteger(page.next) || page.next < 0) return;
+      const { messages, next } = page;
+      const instance = typeof page.instance === "string" ? page.instance : undefined;
+      for (const m of messages) {
+        try {
+          const o = await openEnvelope(me, fromB64u(m.envelope));
+          let contact = s.contacts.find((c) => c.encPublic === o.senderKey);
+          const verified = !!contact && contact.member === o.payload.member;
+          if (!contact) {
+            const pub = fromB64u(o.senderKey);
+            const stranger: PublicIdentity = { v: 1, name: `${o.payload.from.slice(0, 28)} (not in contacts)`, encPublic: o.senderKey, member: o.payload.member, mailbox: await mailboxFor(pub) };
+            s = addContact(s, stranger, undefined, { unverified: true });
+            contact = s.contacts.find((c) => c.mailbox === stranger.mailbox)!;
+          }
+          // The payload must name one of the two DM inbox ids only this pair can derive.
+          const dm = await dmInboxes(me, contact);
+          if (o.payload.inbox !== toHex(dm.mine) && o.payload.inbox !== toHex(dm.theirs)) continue;
+          const msg: ChatMessage = {
+            id: o.payload.id,
+            dir: "in",
+            body: o.payload.body,
+            at: o.payload.sentAt,
+            commitment: toHex(o.commitment),
+            authorTag: toHex(o.authorTag),
+            senderVerified: verified,
+            member: o.payload.member,
+            blind: o.payload.blind,
+            relaySeq: m.seq,
+          };
+          s = addMessage(s, contact.mailbox, msg);
+        } catch {
+          /* not for us or tampered: skip */
         }
-        // The payload must name one of the two DM inbox ids only this pair can derive.
-        const dm = await dmInboxes(me, contact);
-        if (o.payload.inbox !== toHex(dm.mine) && o.payload.inbox !== toHex(dm.theirs)) continue;
-        const msg: ChatMessage = {
-          id: o.payload.id,
-          dir: "in",
-          body: o.payload.body,
-          at: o.payload.sentAt,
-          commitment: toHex(o.commitment),
-          authorTag: toHex(o.authorTag),
-          senderVerified: verified,
-          member: o.payload.member,
-          blind: o.payload.blind,
-          relaySeq: m.seq,
-        };
-        s = addMessage(s, contact.mailbox, msg);
-      } catch {
-        /* not for us or tampered: skip */
       }
+      if (relayRef.current !== relay || stateRef.current !== before) return;
+      const previous = s.relayCursor;
+      if (s !== before || previous?.relay !== relay || previous.instance !== instance || previous.after !== next) {
+        await commit({ ...s, cursor: next, relayCursor: { relay, instance, after: next } });
+      }
+    } finally {
+      polling.current = false;
     }
-    s = { ...s, cursor: next };
-    await commit(s);
-  }, [me, myPublic, relay, relayOk, commit]);
+  }, [me, myPublic, relay, relayOk, requiresAccess, readToken, commit]);
 
   useEffect(() => {
     if (boot !== "ready") return;
@@ -266,12 +293,11 @@ export function PrivateMessenger() {
       const inbox = theirsExists ? dm.theirs : dm.mine;
       const s = await seal(me, contact, body, { inbox });
       if (relayOk) {
-        const up = await fetch(`${relay.replace(/\/$/, "")}/v1/mailboxes/${contact.mailbox}/messages`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ envelope: toB64u(s.envelope) }),
-        });
-        if (!up.ok) throw new Error(`relay refused the envelope (${up.status})`);
+        const token = requiresAccess && access.relay === relay ? access.write[contact.mailbox] : undefined;
+        if (requiresAccess && !relayAuthorization(relay, token ?? "").authorization) {
+          throw new Error("Enter this contact's relay write capability before sending");
+        }
+        await submitEnvelope({ relay, mailbox: contact.mailbox, envelope: toB64u(s.envelope), commitment: toHex(s.commitment), token });
       } else if (previewMode) {
         setNotice("No reachable ciphertext relay; the envelope is stored only in this browser. The commitment can still be posted on Preview.");
       }
@@ -399,7 +425,23 @@ export function PrivateMessenger() {
             ))}
             {!state.contacts.length && <li className="pm-muted pm-small">No contacts yet. Swap invite codes with someone (open this page in a second browser to try it alone).</li>}
           </ul>
-          <Settings relay={relay} chain={chain} onRelay={(u) => setRelay(u)} onChain={(u) => { setChain(u); localStorage.setItem(CHAIN_KEY, u); }} onNotice={setNotice} />
+          {requiresAccess && canAuthorizeRelay(relay) && (
+            <details className="pm-details">
+              <summary>Relay mailbox access</summary>
+              <p className="pm-muted pm-small">Capabilities apply to {relay} for this tab session.</p>
+              <label className="pm-label pm-small">Your read capability
+                <input type="password" autoComplete="off" className="pm-input pm-mono" value={readToken}
+                  onChange={(e) => setAccess({ relay, read: e.target.value, write: access.relay === relay ? access.write : {} })} />
+              </label>
+              {active && (
+                <label className="pm-label pm-small">Contact write capability
+                  <input type="password" autoComplete="off" className="pm-input pm-mono" value={(access.relay === relay && access.write[active]) || ""}
+                    onChange={(e) => setAccess({ relay, read: readToken, write: { ...(access.relay === relay ? access.write : {}), [active]: e.target.value } })} />
+                </label>
+              )}
+            </details>
+          )}
+          <Settings relay={relay} chain={chain} onRelay={(u) => { setAccess({ relay: "", read: "", write: {} }); setRelayOk(null); setRelay(u); }} onChain={(u) => { setChain(u); localStorage.setItem(CHAIN_KEY, u); }} onNotice={setNotice} />
         </aside>
         <section className="pm-thread" aria-label="Conversation">
           {!contact ? (
